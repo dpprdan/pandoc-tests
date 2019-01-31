@@ -1,0 +1,889 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta http-equiv="Content-Style-Type" content="text/css" />
+  <meta name="generator" content="pandoc" />
+  <meta name="author" content="Sean Hardison" />
+  <title>State of the Ecosystem: Indicator Processing &amp; Visualization</title>
+  <style type="text/css">
+      code{white-space: pre-wrap;}
+      span.smallcaps{font-variant: small-caps;}
+      span.underline{text-decoration: underline;}
+      div.column{display: inline-block; vertical-align: top; width: 50%;}
+  </style>
+  <style type="text/css">
+a.sourceLine { display: inline-block; line-height: 1.25; }
+a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }
+a.sourceLine:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode { white-space: pre; position: relative; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+code.sourceCode { white-space: pre-wrap; }
+a.sourceLine { text-indent: -1em; padding-left: 1em; }
+}
+pre.numberSource a.sourceLine
+  { position: relative; left: -4em; }
+pre.numberSource a.sourceLine::before
+  { content: attr(title);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; pointer-events: all; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  }
+@media screen {
+a.sourceLine::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+</head>
+<body>
+<div id="header">
+<h1 class="title">State of the Ecosystem: Indicator Processing &amp; Visualization</h1>
+<h2 class="author">Sean Hardison</h2>
+</div>
+<h2 id="introduction">Introduction</h2>
+<p>The purpose of this file is to document State of the Ecosystem (SOE) indicator data processing. To update existing data sets, set the <code>save_clean</code> parameter in the Rmarkdown set-up chunk to <code>TRUE</code>. Raw data for these indicators are available in the file directory <code>extdata</code>, and libraries required to process indicator data sets are shown below.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1-1" title="1">knitr<span class="op">::</span>opts_chunk<span class="op">$</span><span class="kw">set</span>(<span class="dt">echo =</span> <span class="ot">TRUE</span>,                                     <span class="dt">fig.align=</span><span class="st">&#39;center&#39;</span>)</a>
+<a class="sourceLine" id="cb1-2" title="2"></a>
+<a class="sourceLine" id="cb1-3" title="3"><span class="co">#Required libraries</span></a>
+<a class="sourceLine" id="cb1-4" title="4"><span class="kw">library</span>(dplyr)</a>
+<a class="sourceLine" id="cb1-5" title="5"><span class="kw">library</span>(stringr)</a>
+<a class="sourceLine" id="cb1-6" title="6"><span class="kw">library</span>(tidyr)</a>
+<a class="sourceLine" id="cb1-7" title="7"><span class="kw">library</span>(ggplot2)</a>
+<a class="sourceLine" id="cb1-8" title="8"><span class="kw">library</span>(lubridate)</a>
+<a class="sourceLine" id="cb1-9" title="9"><span class="kw">library</span>(here)</a>
+<a class="sourceLine" id="cb1-10" title="10"><span class="kw">library</span>(zoo)</a>
+<a class="sourceLine" id="cb1-11" title="11"><span class="kw">library</span>(kableExtra)</a>
+<a class="sourceLine" id="cb1-12" title="12"><span class="kw">library</span>(sf)</a>
+<a class="sourceLine" id="cb1-13" title="13"><span class="kw">library</span>(rgdal)</a>
+<a class="sourceLine" id="cb1-14" title="14"><span class="kw">library</span>(raster)</a>
+<a class="sourceLine" id="cb1-15" title="15"><span class="kw">library</span>(sp)</a>
+<a class="sourceLine" id="cb1-16" title="16"><span class="kw">library</span>(gridExtra)</a>
+<a class="sourceLine" id="cb1-17" title="17"></a>
+<a class="sourceLine" id="cb1-18" title="18"><span class="co">#Data directories</span></a>
+<a class="sourceLine" id="cb1-19" title="19">raw.dir &lt;-<span class="st"> </span><span class="kw">here</span>(<span class="st">&quot;inst&quot;</span>,<span class="st">&quot;extdata&quot;</span>) <span class="co">#raw data directory</span></a>
+<a class="sourceLine" id="cb1-20" title="20">clean.dir &lt;-<span class="st"> </span><span class="kw">here</span>(<span class="st">&quot;data&quot;</span>) <span class="co">#output directory for cleaned data</span></a>
+<a class="sourceLine" id="cb1-21" title="21">gis.dir &lt;-<span class="st"> </span><span class="kw">here</span>(<span class="st">&quot;inst&quot;</span>,<span class="st">&quot;extdata&quot;</span>,<span class="st">&quot;gis&quot;</span>)</a>
+<a class="sourceLine" id="cb1-22" title="22">sample.dir &lt;-<span class="st"> </span><span class="kw">here</span>(<span class="st">&quot;inst&quot;</span>,<span class="st">&quot;extdata&quot;</span>,<span class="st">&quot;sample&quot;</span>)</a>
+<a class="sourceLine" id="cb1-23" title="23"></a>
+<a class="sourceLine" id="cb1-24" title="24"><span class="co">#CRS</span></a>
+<a class="sourceLine" id="cb1-25" title="25">crs &lt;-<span class="st"> &quot;+proj=longlat +datum=NAD83 +no_defs +ellps=GRS80 +towgs84=0,0,0&quot;</span></a>
+<a class="sourceLine" id="cb1-26" title="26"></a>
+<a class="sourceLine" id="cb1-27" title="27"><span class="co">#Write output to file</span></a>
+<a class="sourceLine" id="cb1-28" title="28">save_clean &lt;-<span class="st"> </span><span class="ot">FALSE</span></a>
+<a class="sourceLine" id="cb1-29" title="29"></a>
+<a class="sourceLine" id="cb1-30" title="30"><span class="co">#Execute spatial processing (must be TRUE to write clean data to file). If FALSE, will load sample data from file for plotting example</span></a>
+<a class="sourceLine" id="cb1-31" title="31">spatial_processing &lt;-<span class="st"> </span><span class="ot">FALSE</span></a></code></pre></div>
+<h2 id="data-sets">Data sets</h2>
+<h3 id="surface-winds" class="tabset tabset-fade">Surface winds</h3>
+<p>These data are sourced from the <a href="https://www.esrl.noaa.gov/psd/data/gridded/data.narr.monolevel.html">NCEP North American Regional Reanalysis (NARR)</a>, extending from January 1979 to September 2018.</p>
+<table class="table table-striped" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<caption>
+Variables in “NCEP NARR surface wind; TKE; HLCY, monthly, 1979-2018, V1.csv”
+</caption>
+<thead>
+<tr>
+<th style="text-align:left;">
+Variable
+</th>
+<th style="text-align:left;">
+Name
+</th>
+<th style="text-align:left;">
+Units
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+Wind speed
+</td>
+<td style="text-align:left;">
+uwnd
+</td>
+<td style="text-align:left;width: 5cm; ">
+m sec<sup>-1</sup>
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Wind direction
+</td>
+<td style="text-align:left;">
+vwnd
+</td>
+<td style="text-align:left;width: 5cm; ">
+°
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Turbulent kinetic energy
+</td>
+<td style="text-align:left;">
+tke
+</td>
+<td style="text-align:left;width: 5cm; ">
+J kg<sup>-1</sup>
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Storm relative helicity
+</td>
+<td style="text-align:left;">
+hlcy
+</td>
+<td style="text-align:left;width: 5cm; ">
+m<sup>2</sup>sec<sup>-2</sup>
+</td>
+</tr>
+</tbody>
+</table>
+<p>Variables included in these data are surface wind speed and direction (<em>uwnd</em> and <em>vwnd</em> respectively), surface turbulent kinetic energy (TKE), and storm relative helicity (HLCY). An indicator for total wind speed is calculated below as <br /><span class="math display">$$\textrm{TWS} = \sqrt{u^2 + v^2}$$</span><br />. Data are visualized seasonally (Fall = October, November, December; Winter = January, February, March; Spring = April, May, June; Summer = July, August, September).</p>
+<p><strong>Filename</strong>: NCEP NARR surface wind; TKE; HLCY, monthly, 1979-2018, V1.csv<br />
+<strong>Contributor</strong>: Vincent Saba, (vincent.saba@noaa.gov)</p>
+<h4 id="processing">Processing</h4>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb2-1" title="1"><span class="co"># Read in raw data</span></a>
+<a class="sourceLine" id="cb2-2" title="2">d &lt;-<span class="st"> </span><span class="kw">read.csv</span>(<span class="kw">file.path</span>(raw.dir,<span class="st">&quot;NCEP NARR surface wind; TKE; HLCY, monthly, 1979-2018, V1.csv&quot;</span>))</a>
+<a class="sourceLine" id="cb2-3" title="3"></a>
+<a class="sourceLine" id="cb2-4" title="4"><span class="co"># Processing steps for all wind speed data</span></a>
+<a class="sourceLine" id="cb2-5" title="5">wind_clean1 &lt;-<span class="st"> </span>d  <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">gather</span>(., Var, Value, GB.uwnd<span class="op">:</span>MAB.tke) <span class="op">%&gt;%</span><span class="st"> </span><span class="co">#convert wide to long</span></a>
+<a class="sourceLine" id="cb2-6" title="6"><span class="st">  </span>dplyr<span class="op">::</span><span class="kw">rename</span>(<span class="dt">Time =</span> Month.Year) <span class="op">%&gt;%</span><span class="st"> </span><span class="co">#rename time variable</span></a>
+<a class="sourceLine" id="cb2-7" title="7"><span class="st">  </span><span class="kw">separate</span>(Var, <span class="kw">c</span>(<span class="st">&quot;EPU&quot;</span>,<span class="st">&quot;Var&quot;</span>),<span class="st">&quot;</span><span class="ch">\\</span><span class="st">.&quot;</span>) <span class="op">%&gt;%</span><span class="st"> </span><span class="co">#separate out EPU from variable names</span></a>
+<a class="sourceLine" id="cb2-8" title="8"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Time =</span> <span class="kw">as.yearmon</span>(<span class="kw">as.Date</span>(.<span class="op">$</span>Time,Time, <span class="dt">format =</span> <span class="st">&quot;%d-%b-%y&quot;</span>), <span class="st">&quot;%m/%Y&quot;</span>), <span class="co">#Convert to date format</span></a>
+<a class="sourceLine" id="cb2-9" title="9">         <span class="dt">Units =</span> plyr<span class="op">::</span><span class="kw">mapvalues</span>(Var, <span class="dt">from =</span> <span class="kw">unique</span>(Var), <span class="dt">to =</span> <span class="kw">c</span>(<span class="kw">rep</span>(<span class="st">&quot;J/kg&quot;</span>,<span class="dv">2</span>),<span class="st">&quot;m^2/sec^2&quot;</span>,<span class="st">&quot;J/kg&quot;</span>)), <span class="co">#add units</span></a>
+<a class="sourceLine" id="cb2-10" title="10">         Time, <span class="dt">season =</span> plyr<span class="op">::</span><span class="kw">mapvalues</span>(<span class="kw">month</span>(Time), <span class="dt">from =</span> <span class="kw">seq</span>(<span class="dv">1</span>,<span class="dv">12</span>,<span class="dv">1</span>), <span class="co">#Get season</span></a>
+<a class="sourceLine" id="cb2-11" title="11">                                         <span class="dt">to =</span> <span class="kw">c</span>(<span class="kw">rep</span>(<span class="st">&quot;winter&quot;</span>,<span class="dv">3</span>),</a>
+<a class="sourceLine" id="cb2-12" title="12">                                                <span class="kw">rep</span>(<span class="st">&quot;spring&quot;</span>,<span class="dv">3</span>),</a>
+<a class="sourceLine" id="cb2-13" title="13">                                                <span class="kw">rep</span>(<span class="st">&quot;summer&quot;</span>,<span class="dv">3</span>),</a>
+<a class="sourceLine" id="cb2-14" title="14">                                                <span class="kw">rep</span>(<span class="st">&quot;fall&quot;</span>,<span class="dv">3</span>)))) </a>
+<a class="sourceLine" id="cb2-15" title="15"></a>
+<a class="sourceLine" id="cb2-16" title="16"><span class="co"># Calculate total wind speed from u and v components</span></a>
+<a class="sourceLine" id="cb2-17" title="17">total_wind_speed &lt;-<span class="st"> </span>wind_clean1 <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb2-18" title="18"><span class="st">  </span><span class="kw">filter</span>(Var <span class="op">==</span><span class="st"> &quot;uwnd&quot;</span><span class="op">|</span><span class="st"> </span>Var <span class="op">==</span><span class="st"> &quot;vwnd&quot;</span>) <span class="op">%&gt;%</span><span class="st"> </span><span class="co">#select variables</span></a>
+<a class="sourceLine" id="cb2-19" title="19"><span class="st">  </span><span class="kw">spread</span>(., Var, Value) <span class="op">%&gt;%</span><span class="st"> </span><span class="co">#convert to wide for calculating tws</span></a>
+<a class="sourceLine" id="cb2-20" title="20"><span class="st">  </span><span class="kw">mutate</span>(<span class="st">`</span><span class="dt">total wind speed</span><span class="st">`</span> =<span class="st"> </span><span class="kw">sqrt</span>(uwnd<span class="op">^</span><span class="dv">2</span> <span class="op">+</span><span class="st"> </span>vwnd<span class="op">^</span><span class="dv">2</span>)) <span class="op">%&gt;%</span><span class="st">  </span><span class="co">#tws</span></a>
+<a class="sourceLine" id="cb2-21" title="21"><span class="st">  </span>dplyr<span class="op">::</span><span class="kw">select</span>(<span class="op">-</span>uwnd, <span class="op">-</span>vwnd) <span class="op">%&gt;%</span><span class="st"> </span><span class="co">#start processing back to SOE format</span></a>
+<a class="sourceLine" id="cb2-22" title="22"><span class="st">  </span><span class="kw">gather</span>(.,Var, Value, <span class="st">`</span><span class="dt">total wind speed</span><span class="st">`</span>) <span class="co">#convert to long</span></a>
+<a class="sourceLine" id="cb2-23" title="23"></a>
+<a class="sourceLine" id="cb2-24" title="24">wind_clean &lt;-<span class="st"> </span><span class="kw">rbind</span>(wind_clean1, total_wind_speed)</a>
+<a class="sourceLine" id="cb2-25" title="25">wind_clean &lt;-<span class="st"> </span>wind_clean <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">unite</span>(., Var, <span class="kw">c</span>(Var, season), <span class="dt">sep =</span> <span class="st">&quot; &quot;</span>) <span class="co">#merge season into Var column</span></a>
+<a class="sourceLine" id="cb2-26" title="26"></a>
+<a class="sourceLine" id="cb2-27" title="27"><span class="cf">if</span> (save_clean){</a>
+<a class="sourceLine" id="cb2-28" title="28"><span class="kw">save</span>(wind_clean, <span class="dt">file =</span></a>
+<a class="sourceLine" id="cb2-29" title="29">       <span class="kw">file.path</span>(clean.dir, <span class="st">&quot;wind_clean.Rdata&quot;</span>))</a>
+<a class="sourceLine" id="cb2-30" title="30">}</a></code></pre></div>
+<h4 id="mab-total-wind-speed">MAB Total Wind Speed</h4>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb3-1" title="1">mab &lt;-<span class="st"> </span>wind_clean <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb3-2" title="2"><span class="st">  </span><span class="kw">filter</span>(<span class="kw">str_detect</span>(Var, <span class="st">&quot;total wind speed&quot;</span>), EPU <span class="op">==</span><span class="st"> &quot;MAB&quot;</span>) <span class="op">%&gt;%</span><span class="st"> </span><span class="co">#filter</span></a>
+<a class="sourceLine" id="cb3-3" title="3"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Var =</span> <span class="kw">word</span>(Var, <span class="dv">-1</span>)) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb3-4" title="4"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Time =</span> <span class="kw">year</span>(Time)) <span class="op">%&gt;%</span><span class="st"> </span><span class="co">#find year</span></a>
+<a class="sourceLine" id="cb3-5" title="5"><span class="st">  </span><span class="kw">group_by</span>(Time, Var) <span class="op">%&gt;%</span><span class="st"> </span><span class="co">#group by season</span></a>
+<a class="sourceLine" id="cb3-6" title="6"><span class="st">  </span>dplyr<span class="op">::</span><span class="kw">summarise</span>(<span class="dt">Value =</span> <span class="kw">mean</span>(Value)) <span class="op">%&gt;%</span><span class="st"> </span><span class="co">#find mean</span></a>
+<a class="sourceLine" id="cb3-7" title="7"><span class="st">  </span><span class="kw">ggplot</span>()<span class="op">+</span><span class="st"> </span><span class="co">#plot</span></a>
+<a class="sourceLine" id="cb3-8" title="8"><span class="st">  </span><span class="kw">geom_line</span>(<span class="kw">aes</span>(<span class="dt">x =</span> Time, <span class="dt">y =</span> Value))<span class="op">+</span></a>
+<a class="sourceLine" id="cb3-9" title="9"><span class="st">  </span><span class="kw">facet_wrap</span>(.<span class="op">~</span>Var, <span class="dt">nrow =</span> <span class="dv">2</span>)<span class="op">+</span></a>
+<a class="sourceLine" id="cb3-10" title="10"><span class="st">  </span><span class="kw">ylab</span>(<span class="st">&quot;Wind Speed (m/s)&quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb3-11" title="11"><span class="st">  </span><span class="kw">ggtitle</span>(<span class="st">&quot;MAB Total Wind Speed&quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb3-12" title="12"><span class="st">  </span><span class="kw">theme_bw</span>()<span class="op">+</span></a>
+<a class="sourceLine" id="cb3-13" title="13"><span class="st">  </span><span class="kw">theme</span>(<span class="dt">strip.background =</span> <span class="kw">element_blank</span>()) </a>
+<a class="sourceLine" id="cb3-14" title="14"></a>
+<a class="sourceLine" id="cb3-15" title="15">mab</a></code></pre></div>
+<p>&lt;!–– img src=“figure/wind_speed_vis-1.png” title=“plot of chunk wind_speed_vis” alt=“plot of chunk wind_speed_vis” style=“display: block; margin: auto;” / –&gt;</p>
+<h4 id="gb-total-wind-speed">GB Total Wind Speed</h4>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb4-1" title="1">gb &lt;-<span class="st"> </span>wind_clean <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb4-2" title="2"><span class="st">  </span><span class="kw">filter</span>(<span class="kw">str_detect</span>(Var, <span class="st">&quot;total wind speed&quot;</span>), EPU <span class="op">==</span><span class="st"> &quot;GB&quot;</span>) <span class="op">%&gt;%</span><span class="st"> </span><span class="co">#filter</span></a>
+<a class="sourceLine" id="cb4-3" title="3"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Var =</span> <span class="kw">word</span>(Var, <span class="dv">-1</span>)) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb4-4" title="4"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Time =</span> <span class="kw">year</span>(Time)) <span class="op">%&gt;%</span><span class="st"> </span><span class="co">#find year</span></a>
+<a class="sourceLine" id="cb4-5" title="5"><span class="st">  </span><span class="kw">group_by</span>(Time, Var) <span class="op">%&gt;%</span><span class="st"> </span><span class="co">#group by season</span></a>
+<a class="sourceLine" id="cb4-6" title="6"><span class="st">  </span>dplyr<span class="op">::</span><span class="kw">summarise</span>(<span class="dt">Value =</span> <span class="kw">mean</span>(Value)) <span class="op">%&gt;%</span><span class="st"> </span><span class="co">#find mean</span></a>
+<a class="sourceLine" id="cb4-7" title="7"><span class="st">  </span></a>
+<a class="sourceLine" id="cb4-8" title="8"><span class="st">  </span><span class="kw">ggplot</span>()<span class="op">+</span><span class="st"> </span><span class="co">#plot</span></a>
+<a class="sourceLine" id="cb4-9" title="9"><span class="st">  </span><span class="kw">geom_line</span>(<span class="kw">aes</span>(<span class="dt">x =</span> Time, <span class="dt">y =</span> Value))<span class="op">+</span></a>
+<a class="sourceLine" id="cb4-10" title="10"><span class="st">  </span><span class="kw">facet_wrap</span>(.<span class="op">~</span>Var, <span class="dt">nrow =</span> <span class="dv">2</span>)<span class="op">+</span></a>
+<a class="sourceLine" id="cb4-11" title="11"><span class="st">  </span><span class="kw">ylab</span>(<span class="st">&quot;Wind Speed (m/s)&quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb4-12" title="12"><span class="st">  </span><span class="kw">ggtitle</span>(<span class="st">&quot;GB Total Wind Speed&quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb4-13" title="13"><span class="st">  </span><span class="kw">theme_bw</span>()<span class="op">+</span></a>
+<a class="sourceLine" id="cb4-14" title="14"><span class="st">  </span><span class="kw">theme</span>(<span class="dt">strip.background =</span> <span class="kw">element_blank</span>()) </a>
+<a class="sourceLine" id="cb4-15" title="15"></a>
+<a class="sourceLine" id="cb4-16" title="16">gb</a></code></pre></div>
+<p>&lt;!–– img src=“figure/GB tws-1.png” title=“plot of chunk GB tws” alt=“plot of chunk GB tws” style=“display: block; margin: auto;” / –&gt;</p>
+<h4 id="gom-total-wind-speed">GOM Total Wind Speed</h4>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb5-1" title="1">gom &lt;-<span class="st"> </span>wind_clean <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb5-2" title="2"><span class="st">  </span><span class="kw">filter</span>(<span class="kw">str_detect</span>(Var, <span class="st">&quot;total wind speed&quot;</span>), EPU <span class="op">==</span><span class="st"> &quot;GOM&quot;</span>) <span class="op">%&gt;%</span><span class="st"> </span><span class="co">#filter</span></a>
+<a class="sourceLine" id="cb5-3" title="3"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Var =</span> <span class="kw">word</span>(Var, <span class="dv">-1</span>)) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb5-4" title="4"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Time =</span> <span class="kw">year</span>(Time)) <span class="op">%&gt;%</span><span class="st"> </span><span class="co">#find year</span></a>
+<a class="sourceLine" id="cb5-5" title="5"><span class="st">  </span><span class="kw">group_by</span>(Time, Var) <span class="op">%&gt;%</span><span class="st"> </span><span class="co">#group by season</span></a>
+<a class="sourceLine" id="cb5-6" title="6"><span class="st">  </span>dplyr<span class="op">::</span><span class="kw">summarise</span>(<span class="dt">Value =</span> <span class="kw">mean</span>(Value)) <span class="op">%&gt;%</span><span class="st"> </span><span class="co">#find mean</span></a>
+<a class="sourceLine" id="cb5-7" title="7"><span class="st">  </span></a>
+<a class="sourceLine" id="cb5-8" title="8"><span class="st">  </span><span class="kw">ggplot</span>()<span class="op">+</span><span class="st"> </span><span class="co">#plot</span></a>
+<a class="sourceLine" id="cb5-9" title="9"><span class="st">  </span><span class="kw">geom_line</span>(<span class="kw">aes</span>(<span class="dt">x =</span> Time, <span class="dt">y =</span> Value))<span class="op">+</span></a>
+<a class="sourceLine" id="cb5-10" title="10"><span class="st">  </span><span class="kw">facet_wrap</span>(.<span class="op">~</span>Var, <span class="dt">nrow =</span> <span class="dv">2</span>)<span class="op">+</span></a>
+<a class="sourceLine" id="cb5-11" title="11"><span class="st">  </span><span class="kw">ylab</span>(<span class="st">&quot;Wind Speed (m/s)&quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb5-12" title="12"><span class="st">  </span><span class="kw">ggtitle</span>(<span class="st">&quot;GOM Total Wind Speed&quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb5-13" title="13"><span class="st">  </span><span class="kw">theme_bw</span>()<span class="op">+</span></a>
+<a class="sourceLine" id="cb5-14" title="14"><span class="st">  </span><span class="kw">theme</span>(<span class="dt">strip.background =</span> <span class="kw">element_blank</span>()) </a>
+<a class="sourceLine" id="cb5-15" title="15"></a>
+<a class="sourceLine" id="cb5-16" title="16">gom</a></code></pre></div>
+<p>&lt;!–– img src=“figure/GOM tws-1.png” title=“plot of chunk GOM tws” alt=“plot of chunk GOM tws” style=“display: block; margin: auto;” / –&gt;</p>
+<h4 id="mab-helicity">MAB Helicity</h4>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb6-1" title="1">mab &lt;-<span class="st"> </span>wind_clean <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb6-2" title="2"><span class="st">  </span><span class="kw">filter</span>(<span class="kw">str_detect</span>(Var, <span class="st">&quot;hcly&quot;</span>), EPU <span class="op">==</span><span class="st"> &quot;MAB&quot;</span>) <span class="op">%&gt;%</span><span class="st"> </span><span class="co">#filter</span></a>
+<a class="sourceLine" id="cb6-3" title="3"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Var =</span> <span class="kw">word</span>(Var, <span class="dv">-1</span>)) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb6-4" title="4"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Time =</span> <span class="kw">year</span>(Time)) <span class="op">%&gt;%</span><span class="st"> </span><span class="co">#find year</span></a>
+<a class="sourceLine" id="cb6-5" title="5"><span class="st">  </span><span class="kw">group_by</span>(Time, Var) <span class="op">%&gt;%</span><span class="st"> </span><span class="co">#group by season</span></a>
+<a class="sourceLine" id="cb6-6" title="6"><span class="st">  </span>dplyr<span class="op">::</span><span class="kw">summarise</span>(<span class="dt">Value =</span> <span class="kw">mean</span>(Value)) <span class="op">%&gt;%</span><span class="st"> </span><span class="co">#find mean</span></a>
+<a class="sourceLine" id="cb6-7" title="7"><span class="st">  </span><span class="kw">ggplot</span>()<span class="op">+</span><span class="st"> </span><span class="co">#plot</span></a>
+<a class="sourceLine" id="cb6-8" title="8"><span class="st">  </span><span class="kw">geom_line</span>(<span class="kw">aes</span>(<span class="dt">x =</span> Time, <span class="dt">y =</span> Value))<span class="op">+</span></a>
+<a class="sourceLine" id="cb6-9" title="9"><span class="st">  </span><span class="kw">facet_wrap</span>(.<span class="op">~</span>Var, <span class="dt">nrow =</span> <span class="dv">2</span>)<span class="op">+</span></a>
+<a class="sourceLine" id="cb6-10" title="10"><span class="st">  </span><span class="kw">ylab</span>(<span class="kw">expression</span>(<span class="st">&quot;Relative Helicity (m&quot;</span><span class="op">^</span><span class="dv">2</span><span class="op">*</span><span class="st">&quot; sec&quot;</span><span class="op">^-</span><span class="dv">2</span><span class="op">*</span><span class="st">&quot;)&quot;</span>)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb6-11" title="11"><span class="st">  </span><span class="kw">ggtitle</span>(<span class="st">&quot;MAB Storm Relative Helicity &quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb6-12" title="12"><span class="st">  </span><span class="kw">theme_bw</span>()<span class="op">+</span></a>
+<a class="sourceLine" id="cb6-13" title="13"><span class="st">  </span><span class="kw">theme</span>(<span class="dt">strip.background =</span> <span class="kw">element_blank</span>()) </a>
+<a class="sourceLine" id="cb6-14" title="14"></a>
+<a class="sourceLine" id="cb6-15" title="15">mab</a></code></pre></div>
+<p>&lt;!–– img src=“figure/MAB hel-1.png” title=“plot of chunk MAB hel” alt=“plot of chunk MAB hel” style=“display: block; margin: auto;” / –&gt;</p>
+<h4 id="gb-helicity">GB Helicity</h4>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb7-1" title="1">gb &lt;-<span class="st"> </span>wind_clean <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb7-2" title="2"><span class="st">  </span><span class="kw">filter</span>(<span class="kw">str_detect</span>(Var, <span class="st">&quot;hcly&quot;</span>), EPU <span class="op">==</span><span class="st"> &quot;GB&quot;</span>) <span class="op">%&gt;%</span><span class="st"> </span><span class="co">#filter</span></a>
+<a class="sourceLine" id="cb7-3" title="3"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Var =</span> <span class="kw">word</span>(Var, <span class="dv">-1</span>)) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb7-4" title="4"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Time =</span> <span class="kw">year</span>(Time)) <span class="op">%&gt;%</span><span class="st"> </span><span class="co">#find year</span></a>
+<a class="sourceLine" id="cb7-5" title="5"><span class="st">  </span><span class="kw">group_by</span>(Time, Var) <span class="op">%&gt;%</span><span class="st"> </span><span class="co">#group by season</span></a>
+<a class="sourceLine" id="cb7-6" title="6"><span class="st">  </span>dplyr<span class="op">::</span><span class="kw">summarise</span>(<span class="dt">Value =</span> <span class="kw">mean</span>(Value)) <span class="op">%&gt;%</span><span class="st"> </span><span class="co">#find mean</span></a>
+<a class="sourceLine" id="cb7-7" title="7"><span class="st">  </span><span class="kw">ggplot</span>()<span class="op">+</span><span class="st"> </span><span class="co">#plot</span></a>
+<a class="sourceLine" id="cb7-8" title="8"><span class="st">  </span><span class="kw">geom_line</span>(<span class="kw">aes</span>(<span class="dt">x =</span> Time, <span class="dt">y =</span> Value))<span class="op">+</span></a>
+<a class="sourceLine" id="cb7-9" title="9"><span class="st">  </span><span class="kw">facet_wrap</span>(.<span class="op">~</span>Var, <span class="dt">nrow =</span> <span class="dv">2</span>)<span class="op">+</span></a>
+<a class="sourceLine" id="cb7-10" title="10"><span class="st">  </span><span class="kw">ylab</span>(<span class="kw">expression</span>(<span class="st">&quot;Relative Helicity (m&quot;</span><span class="op">^</span><span class="dv">2</span><span class="op">*</span><span class="st">&quot; sec&quot;</span><span class="op">^-</span><span class="dv">2</span><span class="op">*</span><span class="st">&quot;)&quot;</span>)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb7-11" title="11"><span class="st">  </span><span class="kw">ggtitle</span>(<span class="st">&quot;GB Storm Relative Helicity &quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb7-12" title="12"><span class="st">  </span><span class="kw">theme_bw</span>()<span class="op">+</span></a>
+<a class="sourceLine" id="cb7-13" title="13"><span class="st">  </span><span class="kw">theme</span>(<span class="dt">strip.background =</span> <span class="kw">element_blank</span>()) </a>
+<a class="sourceLine" id="cb7-14" title="14"></a>
+<a class="sourceLine" id="cb7-15" title="15">gb</a></code></pre></div>
+<p>&lt;!–– img src=“figure/GB hel-1.png” title=“plot of chunk GB hel” alt=“plot of chunk GB hel” style=“display: block; margin: auto;” / –&gt;</p>
+<h4 id="gom-helicity">GOM Helicity</h4>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb8-1" title="1">gom &lt;-<span class="st"> </span>wind_clean <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb8-2" title="2"><span class="st">  </span><span class="kw">filter</span>(<span class="kw">str_detect</span>(Var, <span class="st">&quot;hcly&quot;</span>), EPU <span class="op">==</span><span class="st"> &quot;GOM&quot;</span>) <span class="op">%&gt;%</span><span class="st"> </span><span class="co">#filter</span></a>
+<a class="sourceLine" id="cb8-3" title="3"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Var =</span> <span class="kw">word</span>(Var, <span class="dv">-1</span>)) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb8-4" title="4"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Time =</span> <span class="kw">year</span>(Time)) <span class="op">%&gt;%</span><span class="st"> </span><span class="co">#find year</span></a>
+<a class="sourceLine" id="cb8-5" title="5"><span class="st">  </span><span class="kw">group_by</span>(Time, Var) <span class="op">%&gt;%</span><span class="st"> </span><span class="co">#group by season</span></a>
+<a class="sourceLine" id="cb8-6" title="6"><span class="st">  </span>dplyr<span class="op">::</span><span class="kw">summarise</span>(<span class="dt">Value =</span> <span class="kw">mean</span>(Value)) <span class="op">%&gt;%</span><span class="st"> </span><span class="co">#find mean</span></a>
+<a class="sourceLine" id="cb8-7" title="7"><span class="st">  </span><span class="kw">ggplot</span>()<span class="op">+</span><span class="st"> </span><span class="co">#plot</span></a>
+<a class="sourceLine" id="cb8-8" title="8"><span class="st">  </span><span class="kw">geom_line</span>(<span class="kw">aes</span>(<span class="dt">x =</span> Time, <span class="dt">y =</span> Value))<span class="op">+</span></a>
+<a class="sourceLine" id="cb8-9" title="9"><span class="st">  </span><span class="kw">facet_wrap</span>(.<span class="op">~</span>Var, <span class="dt">nrow =</span> <span class="dv">2</span>)<span class="op">+</span></a>
+<a class="sourceLine" id="cb8-10" title="10"><span class="st">  </span><span class="kw">ylab</span>(<span class="kw">expression</span>(<span class="st">&quot;Relative Helicity (m&quot;</span><span class="op">^</span><span class="dv">2</span><span class="op">*</span><span class="st">&quot; sec&quot;</span><span class="op">^-</span><span class="dv">2</span><span class="op">*</span><span class="st">&quot;)&quot;</span>)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb8-11" title="11"><span class="st">  </span><span class="kw">ggtitle</span>(<span class="st">&quot;GOM Storm Relative Helicity &quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb8-12" title="12"><span class="st">  </span><span class="kw">theme_bw</span>()<span class="op">+</span></a>
+<a class="sourceLine" id="cb8-13" title="13"><span class="st">  </span><span class="kw">theme</span>(<span class="dt">strip.background =</span> <span class="kw">element_blank</span>()) </a>
+<a class="sourceLine" id="cb8-14" title="14"></a>
+<a class="sourceLine" id="cb8-15" title="15">gom</a></code></pre></div>
+<p>&lt;!–– img src=“figure/GOM hel-1.png” title=“plot of chunk GOM hel” alt=“plot of chunk GOM hel” style=“display: block; margin: auto;” / –&gt;</p>
+<h4 id="mab-tke">MAB TKE</h4>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb9-1" title="1">mab &lt;-<span class="st"> </span>wind_clean <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb9-2" title="2"><span class="st">  </span><span class="kw">filter</span>(<span class="kw">str_detect</span>(Var, <span class="st">&quot;tke&quot;</span>), EPU <span class="op">==</span><span class="st"> &quot;MAB&quot;</span>) <span class="op">%&gt;%</span><span class="st"> </span><span class="co">#filter</span></a>
+<a class="sourceLine" id="cb9-3" title="3"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Var =</span> <span class="kw">word</span>(Var, <span class="dv">-1</span>)) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb9-4" title="4"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Time =</span> <span class="kw">year</span>(Time)) <span class="op">%&gt;%</span><span class="st"> </span><span class="co">#find year</span></a>
+<a class="sourceLine" id="cb9-5" title="5"><span class="st">  </span><span class="kw">group_by</span>(Time, Var) <span class="op">%&gt;%</span><span class="st"> </span><span class="co">#group by season</span></a>
+<a class="sourceLine" id="cb9-6" title="6"><span class="st">  </span>dplyr<span class="op">::</span><span class="kw">summarise</span>(<span class="dt">Value =</span> <span class="kw">mean</span>(Value)) <span class="op">%&gt;%</span><span class="st"> </span><span class="co">#find mean</span></a>
+<a class="sourceLine" id="cb9-7" title="7"><span class="st">  </span><span class="kw">ggplot</span>()<span class="op">+</span><span class="st"> </span><span class="co">#plot</span></a>
+<a class="sourceLine" id="cb9-8" title="8"><span class="st">  </span><span class="kw">geom_line</span>(<span class="kw">aes</span>(<span class="dt">x =</span> Time, <span class="dt">y =</span> Value))<span class="op">+</span></a>
+<a class="sourceLine" id="cb9-9" title="9"><span class="st">  </span><span class="kw">facet_wrap</span>(.<span class="op">~</span>Var, <span class="dt">nrow =</span> <span class="dv">2</span>)<span class="op">+</span></a>
+<a class="sourceLine" id="cb9-10" title="10"><span class="st">  </span><span class="kw">ylab</span>(<span class="kw">expression</span>(<span class="st">&quot;Total Kinetic Energy (J kg&quot;</span><span class="op">^-</span><span class="dv">1</span><span class="op">*</span><span class="st">&quot;)&quot;</span>)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb9-11" title="11"><span class="st">  </span><span class="kw">ggtitle</span>(<span class="st">&quot;MAB Total Kinetic Energy &quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb9-12" title="12"><span class="st">  </span><span class="kw">theme_bw</span>()<span class="op">+</span></a>
+<a class="sourceLine" id="cb9-13" title="13"><span class="st">  </span><span class="kw">theme</span>(<span class="dt">strip.background =</span> <span class="kw">element_blank</span>()) </a>
+<a class="sourceLine" id="cb9-14" title="14"></a>
+<a class="sourceLine" id="cb9-15" title="15">mab</a></code></pre></div>
+<p>&lt;!–– img src=“figure/MAB tke-1.png” title=“plot of chunk MAB tke” alt=“plot of chunk MAB tke” style=“display: block; margin: auto;” / –&gt;</p>
+<h4 id="gb-tke">GB TKE</h4>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb10-1" title="1">gb &lt;-<span class="st"> </span>wind_clean <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb10-2" title="2"><span class="st">  </span><span class="kw">filter</span>(<span class="kw">str_detect</span>(Var, <span class="st">&quot;tke&quot;</span>), EPU <span class="op">==</span><span class="st"> &quot;GB&quot;</span>) <span class="op">%&gt;%</span><span class="st"> </span><span class="co">#filter</span></a>
+<a class="sourceLine" id="cb10-3" title="3"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Var =</span> <span class="kw">word</span>(Var, <span class="dv">-1</span>)) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb10-4" title="4"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Time =</span> <span class="kw">year</span>(Time)) <span class="op">%&gt;%</span><span class="st"> </span><span class="co">#find year</span></a>
+<a class="sourceLine" id="cb10-5" title="5"><span class="st">  </span><span class="kw">group_by</span>(Time, Var) <span class="op">%&gt;%</span><span class="st"> </span><span class="co">#group by season</span></a>
+<a class="sourceLine" id="cb10-6" title="6"><span class="st">  </span>dplyr<span class="op">::</span><span class="kw">summarise</span>(<span class="dt">Value =</span> <span class="kw">mean</span>(Value)) <span class="op">%&gt;%</span><span class="st"> </span><span class="co">#find mean</span></a>
+<a class="sourceLine" id="cb10-7" title="7"><span class="st">  </span><span class="kw">ggplot</span>()<span class="op">+</span><span class="st"> </span><span class="co">#plot</span></a>
+<a class="sourceLine" id="cb10-8" title="8"><span class="st">  </span><span class="kw">geom_line</span>(<span class="kw">aes</span>(<span class="dt">x =</span> Time, <span class="dt">y =</span> Value))<span class="op">+</span></a>
+<a class="sourceLine" id="cb10-9" title="9"><span class="st">  </span><span class="kw">facet_wrap</span>(.<span class="op">~</span>Var, <span class="dt">nrow =</span> <span class="dv">2</span>)<span class="op">+</span></a>
+<a class="sourceLine" id="cb10-10" title="10"><span class="st">  </span><span class="kw">ylab</span>(<span class="kw">expression</span>(<span class="st">&quot;Total Kinetic Energy (J kg&quot;</span><span class="op">^-</span><span class="dv">1</span><span class="op">*</span><span class="st">&quot;)&quot;</span>)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb10-11" title="11"><span class="st">  </span><span class="kw">ggtitle</span>(<span class="st">&quot;GB Total Kinetic Energy &quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb10-12" title="12"><span class="st">  </span><span class="kw">theme_bw</span>()<span class="op">+</span></a>
+<a class="sourceLine" id="cb10-13" title="13"><span class="st">  </span><span class="kw">theme</span>(<span class="dt">strip.background =</span> <span class="kw">element_blank</span>()) </a>
+<a class="sourceLine" id="cb10-14" title="14"></a>
+<a class="sourceLine" id="cb10-15" title="15">gb</a></code></pre></div>
+<p>&lt;!–– img src=“figure/GB tke-1.png” title=“plot of chunk GB tke” alt=“plot of chunk GB tke” style=“display: block; margin: auto;” / –&gt;</p>
+<h4 id="gom-tke">GOM TKE</h4>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb11-1" title="1">gom &lt;-<span class="st"> </span>wind_clean <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb11-2" title="2"><span class="st">  </span><span class="kw">filter</span>(<span class="kw">str_detect</span>(Var, <span class="st">&quot;tke&quot;</span>), EPU <span class="op">==</span><span class="st"> &quot;GOM&quot;</span>) <span class="op">%&gt;%</span><span class="st"> </span><span class="co">#filter</span></a>
+<a class="sourceLine" id="cb11-3" title="3"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Var =</span> <span class="kw">word</span>(Var, <span class="dv">-1</span>)) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb11-4" title="4"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Time =</span> <span class="kw">year</span>(Time)) <span class="op">%&gt;%</span><span class="st"> </span><span class="co">#find year</span></a>
+<a class="sourceLine" id="cb11-5" title="5"><span class="st">  </span><span class="kw">group_by</span>(Time, Var) <span class="op">%&gt;%</span><span class="st"> </span><span class="co">#group by season</span></a>
+<a class="sourceLine" id="cb11-6" title="6"><span class="st">  </span>dplyr<span class="op">::</span><span class="kw">summarise</span>(<span class="dt">Value =</span> <span class="kw">mean</span>(Value)) <span class="op">%&gt;%</span><span class="st"> </span><span class="co">#find mean</span></a>
+<a class="sourceLine" id="cb11-7" title="7"><span class="st">  </span><span class="kw">ggplot</span>()<span class="op">+</span><span class="st"> </span><span class="co">#plot</span></a>
+<a class="sourceLine" id="cb11-8" title="8"><span class="st">  </span><span class="kw">geom_line</span>(<span class="kw">aes</span>(<span class="dt">x =</span> Time, <span class="dt">y =</span> Value))<span class="op">+</span></a>
+<a class="sourceLine" id="cb11-9" title="9"><span class="st">  </span><span class="kw">facet_wrap</span>(.<span class="op">~</span>Var, <span class="dt">nrow =</span> <span class="dv">2</span>)<span class="op">+</span></a>
+<a class="sourceLine" id="cb11-10" title="10"><span class="st">  </span><span class="kw">ylab</span>(<span class="kw">expression</span>(<span class="st">&quot;Total Kinetic Energy (J kg&quot;</span><span class="op">^-</span><span class="dv">1</span><span class="op">*</span><span class="st">&quot;)&quot;</span>)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb11-11" title="11"><span class="st">  </span><span class="kw">ggtitle</span>(<span class="st">&quot;GOM Total Kinetic Energy &quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb11-12" title="12"><span class="st">  </span><span class="kw">theme_bw</span>()<span class="op">+</span></a>
+<a class="sourceLine" id="cb11-13" title="13"><span class="st">  </span><span class="kw">theme</span>(<span class="dt">strip.background =</span> <span class="kw">element_blank</span>())</a>
+<a class="sourceLine" id="cb11-14" title="14"></a>
+<a class="sourceLine" id="cb11-15" title="15">gom</a></code></pre></div>
+<p>&lt;!–– img src=“figure/GOM tke-1.png” title=“plot of chunk GOM tke” alt=“plot of chunk GOM tke” style=“display: block; margin: auto;” / –&gt;</p>
+<h3 id="slopewater-proportions" class="tabset tabset-fade">Slopewater proportions</h3>
+<p>Slopewater proportions give the percent total of water type observed in the deep Northeast Channel (150-200 m depth).</p>
+<table class="table table-striped" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<caption>
+Variables in “slopewater_proportions.csv”
+</caption>
+<thead>
+<tr>
+<th style="text-align:left;">
+Variable
+</th>
+<th style="text-align:left;">
+Names
+</th>
+<th style="text-align:left;">
+Units
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+Warm Slope Water proportion
+</td>
+<td style="text-align:left;width: 5cm; ">
+WSW
+</td>
+<td style="text-align:left;">
+unitless
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Labrador Shelf Slope Water proportion
+</td>
+<td style="text-align:left;width: 5cm; ">
+LSLW
+</td>
+<td style="text-align:left;">
+unitless
+</td>
+</tr>
+</tbody>
+</table>
+<p>Raw data fields correspond to year, water mass flavor (WSW = Warm Slope Water, LSLW = Labrador Slope Water), and proportion of total expressed as a percentage.</p>
+<p><strong>Filename</strong>: slopewater_proportions.csv<br />
+<strong>Contributor</strong>: Paula Fratantoni (paula.fratantoni@noaa.gov)</p>
+<h4 id="processing-1">Processing</h4>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb12-1" title="1">d &lt;-<span class="st"> </span><span class="kw">read.csv</span>(<span class="kw">file.path</span>(raw.dir,<span class="st">&quot;slopewater_proportions.csv&quot;</span>))</a>
+<a class="sourceLine" id="cb12-2" title="2"></a>
+<a class="sourceLine" id="cb12-3" title="3">slopewater &lt;-<span class="st"> </span>d <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb12-4" title="4"><span class="st">  </span>dplyr<span class="op">::</span><span class="kw">rename</span>(<span class="dt">Time =</span> year, <span class="dt">Var =</span> water.mass.flavor, <span class="dt">Value =</span> prop) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb12-5" title="5"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">EPU =</span> <span class="st">&quot;all&quot;</span>, <span class="dt">Units =</span> <span class="st">&quot;unitless&quot;</span>, <span class="dt">Var2 =</span> <span class="st">&quot;proportion ne channel&quot;</span>) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb12-6" title="6"><span class="st">  </span><span class="kw">unite</span>(.,Var,<span class="kw">c</span>(Var,Var2), <span class="dt">sep =</span> <span class="st">&quot; &quot;</span>)</a>
+<a class="sourceLine" id="cb12-7" title="7">  </a>
+<a class="sourceLine" id="cb12-8" title="8"><span class="cf">if</span> (save_clean){</a>
+<a class="sourceLine" id="cb12-9" title="9"><span class="kw">save</span>(slopewater, <span class="dt">file =</span></a>
+<a class="sourceLine" id="cb12-10" title="10">       <span class="kw">file.path</span>(clean.dir, <span class="st">&quot;slopewater_proportions.Rdata&quot;</span>))</a>
+<a class="sourceLine" id="cb12-11" title="11">}</a></code></pre></div>
+<h4 id="visualization">Visualization</h4>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb13-1" title="1">slopewater <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb13-2" title="2"><span class="st">  </span><span class="kw">mutate</span>(Var, <span class="dt">Var =</span> plyr<span class="op">::</span><span class="kw">mapvalues</span>(Var, <span class="dt">from =</span> <span class="kw">c</span>(<span class="st">&quot;WSW proportion ne channel&quot;</span>,</a>
+<a class="sourceLine" id="cb13-3" title="3">                                                  <span class="st">&quot;LSLW proportion ne channel&quot;</span>),</a>
+<a class="sourceLine" id="cb13-4" title="4">                                    <span class="dt">to =</span> <span class="kw">c</span>(<span class="st">&quot;WSW&quot;</span>,<span class="st">&quot;LSLW&quot;</span>))) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb13-5" title="5"><span class="st">  </span>dplyr<span class="op">::</span><span class="kw">rename</span>(<span class="dt">Flavor  =</span> Var) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb13-6" title="6"><span class="kw">ggplot</span>() <span class="op">+</span></a>
+<a class="sourceLine" id="cb13-7" title="7"><span class="st">  </span><span class="kw">geom_line</span>(<span class="kw">aes</span>(<span class="dt">x =</span> Time, <span class="dt">y =</span> Value, <span class="dt">color =</span> Flavor))<span class="op">+</span></a>
+<a class="sourceLine" id="cb13-8" title="8"><span class="st">  </span><span class="kw">geom_point</span>(<span class="kw">aes</span>(<span class="dt">x =</span> Time, <span class="dt">y =</span> Value, <span class="dt">color =</span> Flavor)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb13-9" title="9"><span class="st">  </span><span class="kw">ylab</span>(<span class="st">&quot;Percent of Total Slopewater&quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb13-10" title="10"><span class="st">  </span><span class="kw">ggtitle</span>(<span class="st">&quot;Slopewater Proportions in NE Channel&quot;</span>)<span class="op">+</span></a>
+<a class="sourceLine" id="cb13-11" title="11"><span class="st">  </span><span class="kw">theme_bw</span>()<span class="op">+</span></a>
+<a class="sourceLine" id="cb13-12" title="12"><span class="st">  </span><span class="kw">theme</span>(<span class="dt">strip.background =</span> <span class="kw">element_blank</span>())</a></code></pre></div>
+<p>&lt;!–– img src=“figure/slopewater_vis-1.png” title=“plot of chunk slopewater_vis” alt=“plot of chunk slopewater_vis” style=“display: block; margin: auto;” / –&gt;</p>
+<h3 id="ocean-temperature-anomaly" class="tabset tabset-fade">Ocean temperature anomaly</h3>
+<p>These data include <em>in situ</em> regional time series of both surface and bottom water temperature anomalies on the Northeast Continental Shelf. Raw data is split into four files by EPU (SS, GOM, GB, and MAB).</p>
+<table class="table table-striped" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<caption>
+Variables in &quot;Eco{EPU}_core_Ttopbot.csv&quot;
+</caption>
+<thead>
+<tr>
+<th style="text-align:left;">
+Variable
+</th>
+<th style="text-align:left;">
+Names
+</th>
+<th style="text-align:left;">
+Units
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+SST anomaly
+</td>
+<td style="text-align:left;">
+Tsfc_anom
+</td>
+<td style="text-align:left;width: 5cm; ">
+?C
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Reference SST (1981-2010)
+</td>
+<td style="text-align:left;">
+Tsfc_ref
+</td>
+<td style="text-align:left;width: 5cm; ">
+?C
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Bottom temp. anomaly
+</td>
+<td style="text-align:left;">
+Tbot_anom
+</td>
+<td style="text-align:left;width: 5cm; ">
+?C
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Reference BT (1981-2010)
+</td>
+<td style="text-align:left;">
+Tbot_ref
+</td>
+<td style="text-align:left;width: 5cm; ">
+?C
+</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Filenames</strong>: EcoSS_core_Ttopbot.csv, EcoGoM_core_Ttopbot.csv, EcoGB_core_Ttopbot.csv, EcoMAB_core_Ttopbot.csv<br />
+<strong>Contributor</strong>: Paula Fratantoni (paula.fratantoni@noaa.gov)</p>
+<h4 id="processing-2">Processing</h4>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb14-1" title="1">ss &lt;-<span class="st"> </span><span class="kw">read.csv</span>(<span class="kw">file.path</span>(raw.dir,<span class="st">&quot;EcoSS_core_Ttopbot.csv&quot;</span>)) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">mutate</span>(<span class="dt">EPU =</span> <span class="st">&quot;SS&quot;</span>)</a>
+<a class="sourceLine" id="cb14-2" title="2">gom &lt;-<span class="st"> </span><span class="kw">read.csv</span>(<span class="kw">file.path</span>(raw.dir,<span class="st">&quot;EcoGoM_core_Ttopbot.csv&quot;</span>)) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">mutate</span>(<span class="dt">EPU =</span> <span class="st">&quot;GOM&quot;</span>)</a>
+<a class="sourceLine" id="cb14-3" title="3">gb &lt;-<span class="st"> </span><span class="kw">read.csv</span>(<span class="kw">file.path</span>(raw.dir,<span class="st">&quot;EcoGB_core_Ttopbot.csv&quot;</span>)) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">mutate</span>(<span class="dt">EPU =</span> <span class="st">&quot;GB&quot;</span>)</a>
+<a class="sourceLine" id="cb14-4" title="4">mab &lt;-<span class="st"> </span><span class="kw">read.csv</span>(<span class="kw">file.path</span>(raw.dir,<span class="st">&quot;EcoMAB_core_Ttopbot.csv&quot;</span>)) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">mutate</span>(<span class="dt">EPU =</span> <span class="st">&quot;MAB&quot;</span>)</a>
+<a class="sourceLine" id="cb14-5" title="5"></a>
+<a class="sourceLine" id="cb14-6" title="6">ocean_temp_insitu &lt;-<span class="st"> </span><span class="kw">rbind</span>(ss, gom, gb, mab) <span class="op">%&gt;%</span><span class="st"> </span><span class="co">#bind all</span></a>
+<a class="sourceLine" id="cb14-7" title="7"><span class="st">  </span>dplyr<span class="op">::</span><span class="kw">rename</span>(<span class="dt">Time =</span> decimal.year, <span class="dt">Var =</span> variable.name, <span class="dt">Value =</span> temperature) <span class="op">%&gt;%</span><span class="st"> </span><span class="co">#rename</span></a>
+<a class="sourceLine" id="cb14-8" title="8"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Units =</span> <span class="st">&quot;degreesC&quot;</span>, <span class="dt">Time =</span> <span class="kw">as.Date</span>(<span class="kw">format</span>(<span class="kw">date_decimal</span>(Time), <span class="st">&quot;%Y-%b-%d&quot;</span>), <span class="st">&quot;%Y-%b-%d&quot;</span>),</a>
+<a class="sourceLine" id="cb14-9" title="9">         Var, <span class="dt">Var =</span> plyr<span class="op">::</span><span class="kw">mapvalues</span>(Var, <span class="dt">from =</span> <span class="kw">c</span>(<span class="st">&quot;Tsfc_anom&quot;</span>,</a>
+<a class="sourceLine" id="cb14-10" title="10">                             <span class="st">&quot;Tsfc_ref&quot;</span>,</a>
+<a class="sourceLine" id="cb14-11" title="11">                             <span class="st">&quot;Tbot_anom&quot;</span>,</a>
+<a class="sourceLine" id="cb14-12" title="12">                             <span class="st">&quot;Tbot_ref&quot;</span>),</a>
+<a class="sourceLine" id="cb14-13" title="13">                             <span class="dt">to =</span> <span class="kw">c</span>(<span class="st">&quot;sst anomaly in situ&quot;</span>,</a>
+<a class="sourceLine" id="cb14-14" title="14">                                <span class="st">&quot;reference sst in situ (1981-2010)&quot;</span>,</a>
+<a class="sourceLine" id="cb14-15" title="15">                                <span class="st">&quot;bottom temp anomaly in situ&quot;</span>,</a>
+<a class="sourceLine" id="cb14-16" title="16">                                <span class="st">&quot;reference bt in situ (1981-2010)&quot;</span>))) <span class="co">#Rename variables</span></a>
+<a class="sourceLine" id="cb14-17" title="17"></a>
+<a class="sourceLine" id="cb14-18" title="18"><span class="cf">if</span> (save_clean){</a>
+<a class="sourceLine" id="cb14-19" title="19"><span class="kw">save</span>(ocean_temp_insitu, <span class="dt">file =</span></a>
+<a class="sourceLine" id="cb14-20" title="20">       <span class="kw">file.path</span>(clean.dir, <span class="st">&quot;ocean_temp_insitu.Rdata&quot;</span>))</a>
+<a class="sourceLine" id="cb14-21" title="21">}</a></code></pre></div>
+<h4 id="visualization-1">Visualization</h4>
+<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb15-1" title="1">one &lt;-<span class="st"> </span>ocean_temp_insitu <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb15-2" title="2"><span class="st">  </span><span class="kw">filter</span>(Var <span class="op">==</span><span class="st"> &quot;sst anomaly in situ&quot;</span>) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb15-3" title="3"><span class="st">  </span><span class="kw">group_by</span>(<span class="dt">Time =</span> <span class="kw">year</span>(Time), EPU) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb15-4" title="4"><span class="st">  </span>dplyr<span class="op">::</span><span class="kw">summarise</span>(<span class="dt">Value =</span> <span class="kw">mean</span>(Value)) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb15-5" title="5">ggplot2<span class="op">::</span><span class="kw">ggplot</span>() <span class="op">+</span></a>
+<a class="sourceLine" id="cb15-6" title="6"><span class="st">  </span><span class="kw">geom_line</span>(<span class="kw">aes</span>(<span class="dt">x =</span> Time, <span class="dt">y =</span> Value)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb15-7" title="7"><span class="st">  </span><span class="kw">geom_point</span>(<span class="kw">aes</span>(<span class="dt">x =</span> Time, <span class="dt">y =</span> Value), <span class="dt">size =</span> <span class="dv">1</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb15-8" title="8"><span class="st">  </span><span class="kw">facet_grid</span>(.<span class="op">~</span>EPU) <span class="op">+</span></a>
+<a class="sourceLine" id="cb15-9" title="9"><span class="st">  </span><span class="kw">ylab</span>(<span class="kw">expression</span>(<span class="st">&quot;Temp. Anomaly (&quot;</span><span class="op">*</span>degree<span class="op">*</span><span class="st">&quot;C)&quot;</span>)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb15-10" title="10"><span class="st">  </span><span class="kw">ggtitle</span>(<span class="st">&quot;SST&quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb15-11" title="11"><span class="st">  </span><span class="kw">theme_bw</span>()<span class="op">+</span></a>
+<a class="sourceLine" id="cb15-12" title="12"><span class="st">  </span><span class="kw">theme</span>(<span class="dt">strip.background =</span> <span class="kw">element_blank</span>())</a>
+<a class="sourceLine" id="cb15-13" title="13"></a>
+<a class="sourceLine" id="cb15-14" title="14">two &lt;-<span class="st"> </span>ocean_temp_insitu <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb15-15" title="15"><span class="st"> </span><span class="kw">filter</span>(Var <span class="op">==</span><span class="st"> &quot;bottom temp anomaly in situ&quot;</span>) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb15-16" title="16"><span class="st"> </span><span class="kw">group_by</span>(<span class="dt">Time =</span> <span class="kw">year</span>(Time), EPU) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb15-17" title="17"><span class="st"> </span>dplyr<span class="op">::</span><span class="kw">summarise</span>(<span class="dt">Value =</span> <span class="kw">mean</span>(Value)) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb15-18" title="18">ggplot2<span class="op">::</span><span class="kw">ggplot</span>() <span class="op">+</span></a>
+<a class="sourceLine" id="cb15-19" title="19"><span class="st">  </span><span class="kw">geom_line</span>(<span class="kw">aes</span>(<span class="dt">x =</span> Time, <span class="dt">y =</span> Value)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb15-20" title="20"><span class="st">  </span><span class="kw">geom_point</span>(<span class="kw">aes</span>(<span class="dt">x =</span> Time, <span class="dt">y =</span> Value), <span class="dt">size =</span> <span class="dv">1</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb15-21" title="21"><span class="st">  </span><span class="kw">facet_grid</span>(.<span class="op">~</span>EPU) <span class="op">+</span></a>
+<a class="sourceLine" id="cb15-22" title="22"><span class="st">  </span><span class="kw">ylab</span>(<span class="kw">expression</span>(<span class="st">&quot;Temp. Anomaly (&quot;</span><span class="op">*</span>degree<span class="op">*</span><span class="st">&quot;C)&quot;</span>)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb15-23" title="23"><span class="st">  </span><span class="kw">ggtitle</span>(<span class="st">&quot;Bottom temperature&quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb15-24" title="24"><span class="st">  </span><span class="kw">theme_bw</span>()<span class="op">+</span></a>
+<a class="sourceLine" id="cb15-25" title="25"><span class="st">  </span><span class="kw">theme</span>(<span class="dt">strip.background =</span> <span class="kw">element_blank</span>())</a>
+<a class="sourceLine" id="cb15-26" title="26"></a>
+<a class="sourceLine" id="cb15-27" title="27"><span class="kw">grid.arrange</span>(one, two)</a></code></pre></div>
+<p>&lt;!–– img src=“figure/ocean_temp_vis-1.png” title=“plot of chunk ocean_temp_vis” alt=“plot of chunk ocean_temp_vis” style=“display: block; margin: auto;” / –&gt;</p>
+<h3 id="ocean-salinity-anomaly" class="tabset tabset-fade">Ocean salinity anomaly</h3>
+<p>These data include <em>in situ</em> regional time series of both surface and bottom salinity anomalies on the Northeast Continental Shelf. Raw data is split into four files by EPU (SS, GOM, GB, and MAB).</p>
+<table class="table table-striped" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<caption>
+Variables in &quot;Eco{EPU}_core_Stopbot.csv&quot;
+</caption>
+<thead>
+<tr>
+<th style="text-align:left;">
+Variable
+</th>
+<th style="text-align:left;">
+Names
+</th>
+<th style="text-align:left;">
+Units
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+Surface salinity anomaly
+</td>
+<td style="text-align:left;width: 5cm; ">
+Ssfc_anom
+</td>
+<td style="text-align:left;">
+PSU
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Reference surface salinity (1981-2010)
+</td>
+<td style="text-align:left;width: 5cm; ">
+Ssfc_ref
+</td>
+<td style="text-align:left;">
+PSU
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Bottom salinity anomaly
+</td>
+<td style="text-align:left;width: 5cm; ">
+Sbot_anom
+</td>
+<td style="text-align:left;">
+PSU
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Reference bottom salinity (1981-2010)
+</td>
+<td style="text-align:left;width: 5cm; ">
+Sbot_ref
+</td>
+<td style="text-align:left;">
+PSU
+</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Filenames</strong>: EcoSS_core_Stopbot.csv, EcoGoM_core_Stopbot.csv, EcoGB_core_Stopbot.csv, EcoMAB_core_Stopbot.csv<br />
+<strong>Contributor</strong>: Paula Fratantoni (paula.fratantoni@noaa.gov)</p>
+<h4 id="processing-3">Processing</h4>
+<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb16-1" title="1">ss &lt;-<span class="st"> </span><span class="kw">read.csv</span>(<span class="kw">file.path</span>(raw.dir,<span class="st">&quot;EcoSS_core_Stopbot.csv&quot;</span>)) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">mutate</span>(<span class="dt">EPU =</span> <span class="st">&quot;SS&quot;</span>)</a>
+<a class="sourceLine" id="cb16-2" title="2">gom &lt;-<span class="st"> </span><span class="kw">read.csv</span>(<span class="kw">file.path</span>(raw.dir,<span class="st">&quot;EcoGoM_core_Stopbot.csv&quot;</span>)) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">mutate</span>(<span class="dt">EPU =</span> <span class="st">&quot;GOM&quot;</span>)</a>
+<a class="sourceLine" id="cb16-3" title="3">gb &lt;-<span class="st"> </span><span class="kw">read.csv</span>(<span class="kw">file.path</span>(raw.dir,<span class="st">&quot;EcoGB_core_Stopbot.csv&quot;</span>)) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">mutate</span>(<span class="dt">EPU =</span> <span class="st">&quot;GB&quot;</span>)</a>
+<a class="sourceLine" id="cb16-4" title="4">mab &lt;-<span class="st"> </span><span class="kw">read.csv</span>(<span class="kw">file.path</span>(raw.dir,<span class="st">&quot;EcoMAB_core_Stopbot.csv&quot;</span>)) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">mutate</span>(<span class="dt">EPU =</span> <span class="st">&quot;MAB&quot;</span>)</a>
+<a class="sourceLine" id="cb16-5" title="5"></a>
+<a class="sourceLine" id="cb16-6" title="6">ocean_sal_insitu &lt;-<span class="st"> </span><span class="kw">rbind</span>(ss, gom, gb, mab) <span class="op">%&gt;%</span><span class="st"> </span><span class="co">#bind all</span></a>
+<a class="sourceLine" id="cb16-7" title="7"><span class="st">  </span>dplyr<span class="op">::</span><span class="kw">rename</span>(<span class="dt">Time =</span> decimal.year, <span class="dt">Var =</span> variable.name, <span class="dt">Value =</span> salinity) <span class="op">%&gt;%</span><span class="st"> </span><span class="co">#rename</span></a>
+<a class="sourceLine" id="cb16-8" title="8"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Units =</span> <span class="st">&quot;PSU&quot;</span>, <span class="dt">Time =</span> <span class="kw">as.Date</span>(<span class="kw">format</span>(<span class="kw">date_decimal</span>(Time), <span class="st">&quot;%Y-%b-%d&quot;</span>), <span class="st">&quot;%Y-%b-%d&quot;</span>),</a>
+<a class="sourceLine" id="cb16-9" title="9">         Var, <span class="dt">Var =</span> plyr<span class="op">::</span><span class="kw">mapvalues</span>(Var, <span class="dt">from =</span> <span class="kw">c</span>(<span class="st">&quot;Ssfc_anom&quot;</span>,</a>
+<a class="sourceLine" id="cb16-10" title="10">                             <span class="st">&quot;Ssfc_ref&quot;</span>,</a>
+<a class="sourceLine" id="cb16-11" title="11">                             <span class="st">&quot;Sbot_anom&quot;</span>,</a>
+<a class="sourceLine" id="cb16-12" title="12">                             <span class="st">&quot;Sbot_ref&quot;</span>),</a>
+<a class="sourceLine" id="cb16-13" title="13">                     <span class="dt">to =</span> <span class="kw">c</span>(<span class="st">&quot;surface salinity anomaly in situ&quot;</span>,</a>
+<a class="sourceLine" id="cb16-14" title="14">                        <span class="st">&quot;reference surface salinity in situ (1981-2010)&quot;</span>,</a>
+<a class="sourceLine" id="cb16-15" title="15">                        <span class="st">&quot;bottom salinity anomaly in situ&quot;</span>,</a>
+<a class="sourceLine" id="cb16-16" title="16">                        <span class="st">&quot;reference bottom salinity in situ (1981-2010)&quot;</span>)))</a>
+<a class="sourceLine" id="cb16-17" title="17"><span class="cf">if</span> (save_clean){</a>
+<a class="sourceLine" id="cb16-18" title="18"><span class="kw">save</span>(ocean_sal_insitu, <span class="dt">file =</span></a>
+<a class="sourceLine" id="cb16-19" title="19">       <span class="kw">file.path</span>(clean.dir, <span class="st">&quot;ocean_sal_insitu.Rdata&quot;</span>))</a>
+<a class="sourceLine" id="cb16-20" title="20">}</a>
+<a class="sourceLine" id="cb16-21" title="21"></a>
+<a class="sourceLine" id="cb16-22" title="22"><span class="co">#surface salinity</span></a>
+<a class="sourceLine" id="cb16-23" title="23"></a>
+<a class="sourceLine" id="cb16-24" title="24"><span class="co">#bottom salinity</span></a></code></pre></div>
+<h4 id="visualization-2">Visualization</h4>
+<div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb17-1" title="1">one &lt;-<span class="st"> </span>ocean_sal_insitu <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb17-2" title="2"><span class="st">  </span><span class="kw">filter</span>(Var <span class="op">==</span><span class="st"> &quot;surface salinity anomaly in situ&quot;</span>) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb17-3" title="3"><span class="st">  </span><span class="kw">group_by</span>(<span class="dt">Time =</span> <span class="kw">year</span>(Time), EPU) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb17-4" title="4"><span class="st">  </span>dplyr<span class="op">::</span><span class="kw">summarise</span>(<span class="dt">Value =</span> <span class="kw">mean</span>(Value)) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb17-5" title="5">ggplot2<span class="op">::</span><span class="kw">ggplot</span>() <span class="op">+</span></a>
+<a class="sourceLine" id="cb17-6" title="6"><span class="st">  </span><span class="kw">geom_line</span>(<span class="kw">aes</span>(<span class="dt">x =</span> Time, <span class="dt">y =</span> Value)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb17-7" title="7"><span class="st">  </span><span class="kw">geom_point</span>(<span class="kw">aes</span>(<span class="dt">x =</span> Time, <span class="dt">y =</span> Value), <span class="dt">size =</span> <span class="dv">1</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb17-8" title="8"><span class="st">  </span><span class="kw">facet_grid</span>(.<span class="op">~</span>EPU) <span class="op">+</span></a>
+<a class="sourceLine" id="cb17-9" title="9"><span class="st">  </span><span class="kw">ylab</span>(<span class="st">&quot;Salinity Anomaly (PSU)&quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb17-10" title="10"><span class="st">  </span><span class="kw">ggtitle</span>(<span class="st">&quot;Surface salinity&quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb17-11" title="11"><span class="st">  </span><span class="kw">theme_bw</span>()<span class="op">+</span></a>
+<a class="sourceLine" id="cb17-12" title="12"><span class="st">  </span><span class="kw">theme</span>(<span class="dt">strip.background =</span> <span class="kw">element_blank</span>())</a>
+<a class="sourceLine" id="cb17-13" title="13"></a>
+<a class="sourceLine" id="cb17-14" title="14">two &lt;-<span class="st"> </span>ocean_sal_insitu <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb17-15" title="15"><span class="st"> </span><span class="kw">filter</span>(Var <span class="op">==</span><span class="st"> &quot;bottom salinity anomaly in situ&quot;</span>) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb17-16" title="16"><span class="st"> </span><span class="kw">group_by</span>(<span class="dt">Time =</span> <span class="kw">year</span>(Time), EPU) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb17-17" title="17"><span class="st"> </span>dplyr<span class="op">::</span><span class="kw">summarise</span>(<span class="dt">Value =</span> <span class="kw">mean</span>(Value)) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb17-18" title="18">ggplot2<span class="op">::</span><span class="kw">ggplot</span>() <span class="op">+</span></a>
+<a class="sourceLine" id="cb17-19" title="19"><span class="st">  </span><span class="kw">geom_line</span>(<span class="kw">aes</span>(<span class="dt">x =</span> Time, <span class="dt">y =</span> Value)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb17-20" title="20"><span class="st">  </span><span class="kw">geom_point</span>(<span class="kw">aes</span>(<span class="dt">x =</span> Time, <span class="dt">y =</span> Value), <span class="dt">size =</span> <span class="dv">1</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb17-21" title="21"><span class="st">  </span><span class="kw">facet_grid</span>(.<span class="op">~</span>EPU) <span class="op">+</span></a>
+<a class="sourceLine" id="cb17-22" title="22"><span class="st">  </span><span class="kw">ylab</span>(<span class="st">&quot;Salinity Anomaly (PSU)&quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb17-23" title="23"><span class="st">  </span><span class="kw">ggtitle</span>(<span class="st">&quot;Bottom salinity&quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb17-24" title="24"><span class="st">  </span><span class="kw">theme_bw</span>()<span class="op">+</span></a>
+<a class="sourceLine" id="cb17-25" title="25"><span class="st">  </span><span class="kw">theme</span>(<span class="dt">strip.background =</span> <span class="kw">element_blank</span>())</a>
+<a class="sourceLine" id="cb17-26" title="26"></a>
+<a class="sourceLine" id="cb17-27" title="27"><span class="kw">grid.arrange</span>(one, two)</a></code></pre></div>
+<p>&lt;!–– img src=“figure/salinity_vis-1.png” title=“plot of chunk salinity_vis” alt=“plot of chunk salinity_vis” style=“display: block; margin: auto;” / –&gt;</p>
+<h3 id="stratification" class="tabset tabset-fade">Stratification</h3>
+<p>These data are time series of average stratification (0-50 m depth) by EPU.</p>
+<p><strong>Filename</strong>: Strat50.csv <strong>Contributor</strong>: Paula Fratantoni (paula.fratantoni@noaa.gov)</p>
+<table class="table table-striped" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<caption>
+Variables in “Strat50.csv”
+</caption>
+<thead>
+<tr>
+<th style="text-align:left;">
+Variable
+</th>
+<th style="text-align:left;">
+Names
+</th>
+<th style="text-align:left;">
+Units
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+stratification
+</td>
+<td style="text-align:left;width: 5cm; ">
+stratification
+</td>
+<td style="text-align:left;">
+kg m <sup>-3</sup>
+</td>
+</tr>
+</tbody>
+</table>
+<h4 id="processing-4">Processing</h4>
+<div class="sourceCode" id="cb18"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb18-1" title="1">strat &lt;-<span class="st"> </span><span class="kw">read.csv</span>(<span class="kw">file.path</span>(raw.dir, <span class="st">&quot;Strat50.csv&quot;</span>), <span class="dt">stringsAsFactors =</span> <span class="ot">FALSE</span>)</a>
+<a class="sourceLine" id="cb18-2" title="2"></a>
+<a class="sourceLine" id="cb18-3" title="3">stratification &lt;-<span class="st"> </span>strat <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb18-4" title="4"><span class="st">  </span>dplyr<span class="op">::</span><span class="kw">rename</span>(<span class="dt">Time =</span> time, <span class="dt">Var =</span> var, <span class="dt">Value =</span> stratification) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb18-5" title="5"><span class="st">  </span><span class="kw">separate</span>(., Var, <span class="kw">c</span>(<span class="st">&quot;Var&quot;</span>,<span class="st">&quot;EPU&quot;</span>), <span class="dt">sep =</span> <span class="st">&quot;_&quot;</span>) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb18-6" title="6"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Var =</span> <span class="st">&quot;stratification (0-50 m)&quot;</span>,</a>
+<a class="sourceLine" id="cb18-7" title="7">         <span class="dt">Units =</span> <span class="st">&quot;kg m^-3&quot;</span>) </a>
+<a class="sourceLine" id="cb18-8" title="8"></a>
+<a class="sourceLine" id="cb18-9" title="9"><span class="cf">if</span> (save_clean){</a>
+<a class="sourceLine" id="cb18-10" title="10">  <span class="kw">save</span>(stratification, <span class="dt">file =</span> <span class="kw">file.path</span>(clean.dir, <span class="st">&quot;stratification.Rdata&quot;</span>))</a>
+<a class="sourceLine" id="cb18-11" title="11">}</a></code></pre></div>
+<h4 id="visualization-3">Visualization</h4>
+<div class="sourceCode" id="cb19"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb19-1" title="1"><span class="kw">ggplot</span>(<span class="dt">data =</span>stratification)<span class="op">+</span></a>
+<a class="sourceLine" id="cb19-2" title="2"><span class="st">  </span><span class="kw">geom_line</span>(<span class="kw">aes</span>(<span class="dt">x =</span> Time, <span class="dt">y =</span> Value)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb19-3" title="3"><span class="st">  </span><span class="kw">geom_point</span>(<span class="kw">aes</span>(<span class="dt">x =</span> Time, <span class="dt">y =</span> Value)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb19-4" title="4"><span class="st">  </span><span class="kw">facet_grid</span>(.<span class="op">~</span>EPU) <span class="op">+</span></a>
+<a class="sourceLine" id="cb19-5" title="5"><span class="st">  </span><span class="kw">theme_bw</span>() <span class="op">+</span></a>
+<a class="sourceLine" id="cb19-6" title="6"><span class="st">  </span><span class="kw">ylab</span>(<span class="kw">expression</span>(<span class="st">&quot;Stratification (kg m&quot;</span><span class="op">^-</span><span class="dv">3</span><span class="op">*</span><span class="st">&quot;)&quot;</span>)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb19-7" title="7"><span class="st">  </span><span class="kw">theme</span>(<span class="dt">strip.background =</span> <span class="kw">element_blank</span>())</a></code></pre></div>
+<p>&lt;!–– img src=“figure/strat_vis-1.png” title=“plot of chunk strat_vis” alt=“plot of chunk strat_vis” style=“display: block; margin: auto;” / –&gt;</p>
+<h3 id="ecomon-nutrient-data" class="tabset tabset-fade">EcoMon Nutrient Data</h3>
+<p>These data include nutrient data sampled on EcoMon cruises between 11/3/2009 - 10/19/2016.</p>
+<p><strong>Filename</strong>: EcoMon Nutrient Data Through June 2018.csv<br />
+<strong>Contributor</strong>: Chris Melrose (chris.melrose@noaa.gov)</p>
+<h4 id="processing-5">Processing</h4>
+<div class="sourceCode" id="cb20"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb20-1" title="1">d &lt;-<span class="st"> </span><span class="kw">read.csv</span>(<span class="kw">file.path</span>(raw.dir,<span class="st">&quot;EcoMon Nutrient Data Through June 2018.csv&quot;</span>), <span class="dt">stringsAsFactors =</span> <span class="ot">FALSE</span>)</a>
+<a class="sourceLine" id="cb20-2" title="2"></a>
+<a class="sourceLine" id="cb20-3" title="3"><span class="co">#Create data frame for mapping units to variable names</span></a>
+<a class="sourceLine" id="cb20-4" title="4">mapping &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">Units =</span> <span class="kw">as.character</span>(d[<span class="dv">1</span>,]),</a>
+<a class="sourceLine" id="cb20-5" title="5">                      <span class="dt">Var =</span> <span class="kw">as.character</span>(<span class="kw">names</span>(d)))</a>
+<a class="sourceLine" id="cb20-6" title="6">mapping[mapping<span class="op">$</span>Units <span class="op">==</span><span class="st"> &quot;&quot;</span> <span class="op">|</span><span class="st"> </span>mapping<span class="op">$</span>Units <span class="op">==</span><span class="st"> &quot;NA&quot;</span>,]<span class="op">$</span>Units &lt;-<span class="st"> </span><span class="ot">NA</span></a>
+<a class="sourceLine" id="cb20-7" title="7"></a>
+<a class="sourceLine" id="cb20-8" title="8"><span class="co">#remove row with units</span></a>
+<a class="sourceLine" id="cb20-9" title="9">d &lt;-<span class="st"> </span><span class="kw">slice</span>(d,<span class="op">-</span><span class="dv">1</span>)</a>
+<a class="sourceLine" id="cb20-10" title="10"></a>
+<a class="sourceLine" id="cb20-11" title="11">d1 &lt;-<span class="st"> </span>d <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb20-12" title="12"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Time =</span> Date_UTC) <span class="op">%&gt;%</span><span class="st"> </span><span class="co">#create Time variable</span></a>
+<a class="sourceLine" id="cb20-13" title="13"><span class="st">  </span>dplyr<span class="op">::</span><span class="kw">select</span>(<span class="op">-</span>Date_UTC,<span class="op">-</span>Time_UTC) <span class="op">%&gt;%</span><span class="st"> </span><span class="co">#remove time, date</span></a>
+<a class="sourceLine" id="cb20-14" title="14"><span class="st">  </span><span class="kw">gather</span>(., Var, Value, <span class="op">-</span>Latitude, <span class="op">-</span>Longitude, <span class="op">-</span>Time) <span class="op">%&gt;%</span><span class="st"> </span><span class="co">#turn wide to long while retaining lat/lon</span></a>
+<a class="sourceLine" id="cb20-15" title="15"><span class="st">  </span><span class="kw">filter</span>(<span class="op">!</span><span class="kw">is.na</span>(Value)) <span class="op">%&gt;%</span><span class="st"> </span><span class="co">#remove NA</span></a>
+<a class="sourceLine" id="cb20-16" title="16"><span class="st">  </span><span class="kw">left_join</span>(., mapping, <span class="dt">by =</span> <span class="kw">c</span>(<span class="st">&quot;Var&quot;</span>)) <span class="op">%&gt;%</span><span class="st"> </span><span class="co">#join units </span></a>
+<a class="sourceLine" id="cb20-17" title="17"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Longitude =</span> <span class="kw">as.numeric</span>(Longitude),</a>
+<a class="sourceLine" id="cb20-18" title="18">         <span class="dt">Latitude =</span> <span class="kw">as.numeric</span>(Latitude),</a>
+<a class="sourceLine" id="cb20-19" title="19">         <span class="dt">Time =</span> <span class="kw">mdy</span>(Time)) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb20-20" title="20"><span class="st">  </span><span class="kw">filter</span>(Latitude <span class="op">&gt;</span><span class="st"> </span><span class="dv">32</span>, Latitude<span class="op">&lt;</span><span class="dv">50</span>)</a>
+<a class="sourceLine" id="cb20-21" title="21"></a>
+<a class="sourceLine" id="cb20-22" title="22"></a>
+<a class="sourceLine" id="cb20-23" title="23"><span class="co">#Sanity check</span></a>
+<a class="sourceLine" id="cb20-24" title="24"><span class="co"># t1 &lt;- d1[d1$Var == &quot;CTDOXYMOL&quot; ,]$Value</span></a>
+<a class="sourceLine" id="cb20-25" title="25"><span class="co"># t &lt;-  d %&gt;% slice(.,-1)</span></a>
+<a class="sourceLine" id="cb20-26" title="26"><span class="co"># t &lt;- as.character(t$CTDOXYMOL)</span></a>
+<a class="sourceLine" id="cb20-27" title="27"><span class="co"># all(t == t1)</span></a>
+<a class="sourceLine" id="cb20-28" title="28"></a>
+<a class="sourceLine" id="cb20-29" title="29"><span class="co">#Read in EPU shapefile</span></a>
+<a class="sourceLine" id="cb20-30" title="30">epu &lt;-<span class="st"> </span><span class="kw">readOGR</span>(<span class="kw">file.path</span>(gis.dir, <span class="st">&quot;EPU_Extended.shp&quot;</span>), <span class="dt">verbose =</span> F) </a>
+<a class="sourceLine" id="cb20-31" title="31">epu &lt;-<span class="st"> </span><span class="kw">as</span>(epu, <span class="st">&quot;sf&quot;</span>) <span class="co">#convert to sf object</span></a>
+<a class="sourceLine" id="cb20-32" title="32"></a>
+<a class="sourceLine" id="cb20-33" title="33"><span class="cf">if</span>(spatial_processing){</a>
+<a class="sourceLine" id="cb20-34" title="34"></a>
+<a class="sourceLine" id="cb20-35" title="35">  <span class="co">#Test maps</span></a>
+<a class="sourceLine" id="cb20-36" title="36">  <span class="co">#All EPUs</span></a>
+<a class="sourceLine" id="cb20-37" title="37">  <span class="co">#ggplot() + geom_sf(data = epu)</span></a>
+<a class="sourceLine" id="cb20-38" title="38">  </a>
+<a class="sourceLine" id="cb20-39" title="39">  <span class="co">#Scotian shelf</span></a>
+<a class="sourceLine" id="cb20-40" title="40">  <span class="co"># ss &lt;- epu %&gt;% filter(EPU == &quot;SS&quot;)</span></a>
+<a class="sourceLine" id="cb20-41" title="41">  <span class="co"># ggplot() + geom_sf(data = ss)</span></a>
+<a class="sourceLine" id="cb20-42" title="42">  </a>
+<a class="sourceLine" id="cb20-43" title="43">  <span class="co">#get latitude and longitude for creating SpatialPointsDataFrame</span></a>
+<a class="sourceLine" id="cb20-44" title="44">  lat &lt;-<span class="st">  </span><span class="kw">as.numeric</span>(d<span class="op">$</span>Latitude)</a>
+<a class="sourceLine" id="cb20-45" title="45">  lon &lt;-<span class="st"> </span><span class="kw">as.numeric</span>(d<span class="op">$</span>Longitude)</a>
+<a class="sourceLine" id="cb20-46" title="46">  coords &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">lon =</span> lon,<span class="dt">lat =</span> lat)</a>
+<a class="sourceLine" id="cb20-47" title="47">  </a>
+<a class="sourceLine" id="cb20-48" title="48">  <span class="co">#create spdf</span></a>
+<a class="sourceLine" id="cb20-49" title="49">  spdf &lt;-<span class="st"> </span><span class="kw">SpatialPointsDataFrame</span>(<span class="dt">coords =</span> coords, <span class="dt">data =</span> coords,</a>
+<a class="sourceLine" id="cb20-50" title="50">                                 <span class="dt">proj4string =</span> <span class="kw">CRS</span>(crs))</a>
+<a class="sourceLine" id="cb20-51" title="51">  <span class="co">#convert to sf</span></a>
+<a class="sourceLine" id="cb20-52" title="52">  coords_sf &lt;-<span class="st"> </span><span class="kw">st_as_sf</span>(spdf) </a>
+<a class="sourceLine" id="cb20-53" title="53">  </a>
+<a class="sourceLine" id="cb20-54" title="54">  <span class="co">#get intersection for mapping EPUs back to nutrient data</span></a>
+<a class="sourceLine" id="cb20-55" title="55">  epu_intersect &lt;-<span class="st"> </span><span class="kw">st_intersection</span>(epu, coords_sf)</a>
+<a class="sourceLine" id="cb20-56" title="56">  <span class="co">#plot(epu_intersect[epu_intersect$EPU == &quot;MAB&quot;,])</span></a>
+<a class="sourceLine" id="cb20-57" title="57">  </a>
+<a class="sourceLine" id="cb20-58" title="58">  <span class="co">#Map back to nutrient data frame</span></a>
+<a class="sourceLine" id="cb20-59" title="59">  epu_df &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">Longitude =</span> epu_intersect<span class="op">$</span>lon,</a>
+<a class="sourceLine" id="cb20-60" title="60">                       <span class="dt">Latitude =</span> epu_intersect<span class="op">$</span>lat,</a>
+<a class="sourceLine" id="cb20-61" title="61">                       <span class="dt">EPU =</span> epu_intersect<span class="op">$</span>EPU)</a>
+<a class="sourceLine" id="cb20-62" title="62">  <span class="co">#join</span></a>
+<a class="sourceLine" id="cb20-63" title="63">  NE_LME_nutrients &lt;-<span class="st"> </span>d1 <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb20-64" title="64"><span class="st">    </span><span class="kw">left_join</span>(.,epu_df, <span class="dt">by =</span> <span class="kw">c</span>(<span class="st">&quot;Latitude&quot;</span>,<span class="st">&quot;Longitude&quot;</span>))</a>
+<a class="sourceLine" id="cb20-65" title="65">  </a>
+<a class="sourceLine" id="cb20-66" title="66">  <span class="co">#Select data for plotting </span></a>
+<a class="sourceLine" id="cb20-67" title="67">  Nitr &lt;-<span class="st"> </span>NE_LME_nutrients <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">filter</span>(Var <span class="op">==</span><span class="st"> &quot;NITRIT.NITRAT&quot;</span>)</a>
+<a class="sourceLine" id="cb20-68" title="68">  </a>
+<a class="sourceLine" id="cb20-69" title="69">  <span class="co">#Back to SOE format</span></a>
+<a class="sourceLine" id="cb20-70" title="70">  NE_LME_nutrients &lt;-<span class="st"> </span>NE_LME_nutrients <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb20-71" title="71"><span class="st">    </span>dplyr<span class="op">::</span><span class="kw">select</span>(<span class="op">-</span>Latitude, <span class="op">-</span>Longitude) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb20-72" title="72"><span class="st">    </span><span class="kw">mutate</span>(<span class="dt">Value =</span> <span class="kw">as.numeric</span>(Value))</a>
+<a class="sourceLine" id="cb20-73" title="73">  </a>
+<a class="sourceLine" id="cb20-74" title="74">  <span class="cf">if</span> (save_clean){</a>
+<a class="sourceLine" id="cb20-75" title="75">    <span class="kw">save</span>(NE_LME_nutrients,<span class="dt">file =</span> <span class="kw">file.path</span>(clean.dir, <span class="st">&quot;EcoMon_nutrients.Rdata&quot;</span>))</a>
+<a class="sourceLine" id="cb20-76" title="76">  }</a>
+<a class="sourceLine" id="cb20-77" title="77"></a>
+<a class="sourceLine" id="cb20-78" title="78">} <span class="cf">else</span> {</a>
+<a class="sourceLine" id="cb20-79" title="79">  <span class="kw">load</span>(<span class="kw">file.path</span>(sample.dir,<span class="st">&quot;sample_nutrients.Rdata&quot;</span>))</a>
+<a class="sourceLine" id="cb20-80" title="80">  <span class="kw">load</span>(<span class="kw">file.path</span>(clean.dir,<span class="st">&quot;EcoMon_nutrients.Rdata&quot;</span>))</a>
+<a class="sourceLine" id="cb20-81" title="81">}</a></code></pre></div>
+<h4 id="qa">QA</h4>
+<div class="sourceCode" id="cb21"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb21-1" title="1"><span class="co">#Confirm transformation</span></a>
+<a class="sourceLine" id="cb21-2" title="2"><span class="kw">ggplot</span>() <span class="op">+</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb21-3" title="3"><span class="st">  </span><span class="kw">geom_sf</span>(<span class="dt">data =</span> epu) <span class="op">+</span></a>
+<a class="sourceLine" id="cb21-4" title="4"><span class="st">  </span><span class="kw">geom_point</span>(<span class="dt">data =</span> Nitr, <span class="kw">aes</span>(<span class="dt">x =</span> Longitude, <span class="dt">y =</span> Latitude, <span class="dt">color =</span> EPU)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb21-5" title="5"><span class="st">  </span><span class="kw">ggtitle</span>(<span class="st">&quot;Mapping EcoMon Nutrient Data to EPU&quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb21-6" title="6"><span class="st">  </span><span class="kw">theme_bw</span>() </a></code></pre></div>
+<p>&lt;!–– img src=“figure/ecomon_plotting1-1.png” title=“plot of chunk ecomon_plotting1” alt=“plot of chunk ecomon_plotting1” style=“display: block; margin: auto;” / –&gt;</p>
+<h4 id="visualization-4">Visualization</h4>
+<div class="sourceCode" id="cb22"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb22-1" title="1">N &lt;-<span class="st"> </span>NE_LME_nutrients <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb22-2" title="2"><span class="st">  </span><span class="kw">filter</span>(Var <span class="op">==</span><span class="st"> &quot;NITRIT.NITRAT&quot;</span>, Value <span class="op">&gt;</span><span class="st"> </span><span class="dv">0</span>, <span class="op">!</span><span class="kw">is.na</span>(EPU)) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb22-3" title="3"><span class="st">  </span><span class="kw">group_by</span>(EPU, <span class="dt">Time =</span> <span class="kw">year</span>(Time)) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb22-4" title="4"><span class="st">  </span>dplyr<span class="op">::</span><span class="kw">summarise</span>(<span class="dt">Value =</span> <span class="kw">mean</span>(Value, <span class="dt">na.rm =</span> <span class="ot">TRUE</span>)) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb22-5" title="5"><span class="st">  </span><span class="kw">ggplot</span>() <span class="op">+</span></a>
+<a class="sourceLine" id="cb22-6" title="6"><span class="st">  </span><span class="kw">geom_line</span>(<span class="kw">aes</span>(<span class="dt">x =</span> Time, <span class="dt">y =</span> Value, <span class="dt">color =</span> EPU)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb22-7" title="7"><span class="st">  </span><span class="kw">ylab</span>(<span class="kw">expression</span>(<span class="st">&quot;Nitrit+Nitrat (micromoles kg&quot;</span><span class="op">^-</span><span class="dv">1</span><span class="op">*</span><span class="st">&quot;)&quot;</span>))<span class="op">+</span></a>
+<a class="sourceLine" id="cb22-8" title="8"><span class="st">  </span><span class="kw">ggtitle</span>(<span class="st">&quot;Nitrit+Nitrat&quot;</span>)<span class="op">+</span></a>
+<a class="sourceLine" id="cb22-9" title="9"><span class="st">  </span><span class="kw">theme_bw</span>()<span class="op">+</span></a>
+<a class="sourceLine" id="cb22-10" title="10"><span class="st">  </span><span class="kw">theme</span>(<span class="dt">strip.background =</span> <span class="kw">element_blank</span>())<span class="op">+</span></a>
+<a class="sourceLine" id="cb22-11" title="11"><span class="st">  </span><span class="kw">guides</span>(<span class="dt">colour=</span><span class="ot">FALSE</span>)</a>
+<a class="sourceLine" id="cb22-12" title="12"></a>
+<a class="sourceLine" id="cb22-13" title="13">P &lt;-<span class="st"> </span>NE_LME_nutrients <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb22-14" title="14"><span class="st">  </span><span class="kw">filter</span>(Var <span class="op">==</span><span class="st"> &quot;PHSPHT&quot;</span>, Value <span class="op">&gt;</span><span class="st"> </span><span class="dv">0</span>, <span class="op">!</span><span class="kw">is.na</span>(EPU)) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb22-15" title="15"><span class="st">  </span><span class="kw">group_by</span>(EPU, <span class="dt">Time =</span> <span class="kw">year</span>(Time)) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb22-16" title="16"><span class="st">  </span>dplyr<span class="op">::</span><span class="kw">summarise</span>(<span class="dt">Value =</span> <span class="kw">mean</span>(Value, <span class="dt">na.rm =</span> <span class="ot">TRUE</span>)) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb22-17" title="17"><span class="st">  </span><span class="kw">ggplot</span>() <span class="op">+</span></a>
+<a class="sourceLine" id="cb22-18" title="18"><span class="st">  </span><span class="kw">geom_line</span>(<span class="kw">aes</span>(<span class="dt">x =</span> Time, <span class="dt">y =</span> Value, <span class="dt">color =</span> EPU)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb22-19" title="19"><span class="st">  </span><span class="kw">ylab</span>(<span class="kw">expression</span>(<span class="st">&quot;Phosphate (micromoles kg&quot;</span><span class="op">^-</span><span class="dv">1</span><span class="op">*</span><span class="st">&quot;)&quot;</span>))<span class="op">+</span></a>
+<a class="sourceLine" id="cb22-20" title="20"><span class="st">  </span><span class="kw">ggtitle</span>(<span class="st">&quot;Phosphate&quot;</span>)<span class="op">+</span></a>
+<a class="sourceLine" id="cb22-21" title="21"><span class="st">  </span><span class="kw">theme_bw</span>()<span class="op">+</span></a>
+<a class="sourceLine" id="cb22-22" title="22"><span class="st">  </span><span class="kw">theme</span>(<span class="dt">strip.background =</span> <span class="kw">element_blank</span>())<span class="op">+</span></a>
+<a class="sourceLine" id="cb22-23" title="23"><span class="st">  </span><span class="kw">guides</span>(<span class="dt">colour=</span><span class="ot">FALSE</span>)</a>
+<a class="sourceLine" id="cb22-24" title="24"></a>
+<a class="sourceLine" id="cb22-25" title="25">ammon &lt;-<span class="st"> </span>NE_LME_nutrients <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb22-26" title="26"><span class="st">  </span><span class="kw">filter</span>(Var <span class="op">==</span><span class="st"> &quot;AMMONIA&quot;</span>, Value <span class="op">&gt;</span><span class="st"> </span><span class="dv">0</span>, <span class="op">!</span><span class="kw">is.na</span>(EPU)) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb22-27" title="27"><span class="st">  </span><span class="kw">group_by</span>(EPU, <span class="dt">Time =</span> <span class="kw">year</span>(Time)) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb22-28" title="28"><span class="st">  </span>dplyr<span class="op">::</span><span class="kw">summarise</span>(<span class="dt">Value =</span> <span class="kw">mean</span>(Value, <span class="dt">na.rm =</span> <span class="ot">TRUE</span>)) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb22-29" title="29"><span class="st">  </span><span class="kw">ggplot</span>() <span class="op">+</span></a>
+<a class="sourceLine" id="cb22-30" title="30"><span class="st">  </span><span class="kw">geom_line</span>(<span class="kw">aes</span>(<span class="dt">x =</span> Time, <span class="dt">y =</span> Value, <span class="dt">color =</span> EPU)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb22-31" title="31"><span class="st">  </span><span class="kw">ylab</span>(<span class="kw">expression</span>(<span class="st">&quot;Ammonia (micromoles kg&quot;</span><span class="op">^-</span><span class="dv">1</span><span class="op">*</span><span class="st">&quot;)&quot;</span>))<span class="op">+</span></a>
+<a class="sourceLine" id="cb22-32" title="32"><span class="st">  </span><span class="kw">ggtitle</span>(<span class="st">&quot;Ammonia&quot;</span>)<span class="op">+</span></a>
+<a class="sourceLine" id="cb22-33" title="33"><span class="st">  </span><span class="kw">theme_bw</span>()<span class="op">+</span></a>
+<a class="sourceLine" id="cb22-34" title="34"><span class="st">  </span><span class="kw">theme</span>(<span class="dt">strip.background =</span> <span class="kw">element_blank</span>())<span class="op">+</span></a>
+<a class="sourceLine" id="cb22-35" title="35"><span class="st">  </span><span class="kw">theme</span>(<span class="dt">strip.background =</span> <span class="kw">element_blank</span>(),<span class="dt">legend.position =</span> <span class="kw">c</span>(<span class="fl">0.85</span>, <span class="fl">0.6</span>),</a>
+<a class="sourceLine" id="cb22-36" title="36">        <span class="dt">legend.key =</span> <span class="kw">element_rect</span>(<span class="dt">color=</span><span class="st">&quot;transparent&quot;</span>),</a>
+<a class="sourceLine" id="cb22-37" title="37">        <span class="dt">legend.background =</span> <span class="kw">element_rect</span>(<span class="dt">fill=</span><span class="st">&quot;transparent&quot;</span>))</a>
+<a class="sourceLine" id="cb22-38" title="38"></a>
+<a class="sourceLine" id="cb22-39" title="39">silcat &lt;-<span class="st"> </span>NE_LME_nutrients <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb22-40" title="40"><span class="st">  </span><span class="kw">filter</span>(Var <span class="op">==</span><span class="st"> &quot;SILCAT&quot;</span>, Value <span class="op">&gt;</span><span class="st"> </span><span class="dv">0</span>, <span class="op">!</span><span class="kw">is.na</span>(EPU)) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb22-41" title="41"><span class="st">  </span><span class="kw">group_by</span>(EPU, <span class="dt">Time =</span> <span class="kw">year</span>(Time)) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb22-42" title="42"><span class="st">  </span>dplyr<span class="op">::</span><span class="kw">summarise</span>(<span class="dt">Value =</span> <span class="kw">mean</span>(Value, <span class="dt">na.rm =</span> <span class="ot">TRUE</span>)) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb22-43" title="43"><span class="st">  </span><span class="kw">ggplot</span>() <span class="op">+</span></a>
+<a class="sourceLine" id="cb22-44" title="44"><span class="st">  </span><span class="kw">geom_line</span>(<span class="kw">aes</span>(<span class="dt">x =</span> Time, <span class="dt">y =</span> Value, <span class="dt">color =</span> EPU)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb22-45" title="45"><span class="st">  </span><span class="kw">ylab</span>(<span class="kw">expression</span>(<span class="st">&quot;Silicates (micromoles kg&quot;</span><span class="op">^-</span><span class="dv">1</span><span class="op">*</span><span class="st">&quot;)&quot;</span>))<span class="op">+</span></a>
+<a class="sourceLine" id="cb22-46" title="46"><span class="st">    </span><span class="kw">ggtitle</span>(<span class="st">&quot;Silicates&quot;</span>)<span class="op">+</span></a>
+<a class="sourceLine" id="cb22-47" title="47"><span class="st">  </span><span class="kw">theme_bw</span>()<span class="op">+</span></a>
+<a class="sourceLine" id="cb22-48" title="48"><span class="st">  </span><span class="kw">guides</span>(<span class="dt">color=</span> <span class="ot">FALSE</span>)</a>
+<a class="sourceLine" id="cb22-49" title="49"></a>
+<a class="sourceLine" id="cb22-50" title="50">cowplot<span class="op">::</span><span class="kw">plot_grid</span>(N, P, ammon , silcat)</a></code></pre></div>
+<p>&lt;!–– img src=“figure/N nutrients-1.png” title=“plot of chunk N nutrients” alt=“plot of chunk N nutrients” style=“display: block; margin: auto;” / –&gt;</p>
+</body>
+</html>
