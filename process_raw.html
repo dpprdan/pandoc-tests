@@ -1,18 +1,18 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
 <head>
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-  <meta http-equiv="Content-Style-Type" content="text/css" />
+  <meta charset="utf-8" />
   <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
   <meta name="author" content="Sean Hardison" />
   <title>State of the Ecosystem: Indicator Processing &amp; Visualization</title>
-  <style type="text/css">
+  <style>
       code{white-space: pre-wrap;}
       span.smallcaps{font-variant: small-caps;}
       span.underline{text-decoration: underline;}
       div.column{display: inline-block; vertical-align: top; width: 50%;}
   </style>
-  <style type="text/css">
+  <style>
 a.sourceLine { display: inline-block; line-height: 1.25; }
 a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }
 a.sourceLine:empty { height: 1.2em; }
@@ -75,12 +75,15 @@ code span.va { color: #19177c; } /* Variable */
 code span.vs { color: #4070a0; } /* VerbatimString */
 code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
   </style>
+  <!--[if lt IE 9]>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv-printshiv.min.js"></script>
+  <![endif]-->
 </head>
 <body>
-<div id="header">
+<header id="title-block-header">
 <h1 class="title">State of the Ecosystem: Indicator Processing &amp; Visualization</h1>
-<h2 class="author">Sean Hardison</h2>
-</div>
+<p class="author">Sean Hardison</p>
+</header>
 <h2 id="introduction">Introduction</h2>
 <p>The purpose of this file is to document State of the Ecosystem (SOE) indicator data processing. To update existing data sets, set the <code>save_clean</code> parameter in the Rmarkdown set-up chunk to <code>TRUE</code>. Raw data for these indicators are available in the file directory <code>extdata</code>, and libraries required to process indicator data sets are shown below.</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1-1" title="1">knitr<span class="op">::</span>opts_chunk<span class="op">$</span><span class="kw">set</span>(<span class="dt">echo =</span> <span class="ot">TRUE</span>,                                     <span class="dt">fig.align=</span><span class="st">&#39;center&#39;</span>)</a>
@@ -447,7 +450,7 @@ unitless
 <p>These data include <em>in situ</em> regional time series of both surface and bottom water temperature anomalies on the Northeast Continental Shelf. Raw data is split into four files by EPU (SS, GOM, GB, and MAB).</p>
 <table class="table table-striped" style="width: auto !important; margin-left: auto; margin-right: auto;">
 <caption>
-Variables in &quot;Eco{EPU}_core_Ttopbot.csv&quot;
+Variables in "Eco{EPU}_core_Ttopbot.csv"
 </caption>
 <thead>
 <tr>
@@ -566,7 +569,7 @@ Tbot_ref
 <p>These data include <em>in situ</em> regional time series of both surface and bottom salinity anomalies on the Northeast Continental Shelf. Raw data is split into four files by EPU (SS, GOM, GB, and MAB).</p>
 <table class="table table-striped" style="width: auto !important; margin-left: auto; margin-right: auto;">
 <caption>
-Variables in &quot;Eco{EPU}_core_Stopbot.csv&quot;
+Variables in "Eco{EPU}_core_Stopbot.csv"
 </caption>
 <thead>
 <tr>
